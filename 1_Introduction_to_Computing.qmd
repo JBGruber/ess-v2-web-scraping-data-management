@@ -1,0 +1,47 @@
+---
+title: "Introduction to Web Scraping and Data Management for Social Scientists"
+subtitle: "Session 1: Introduction to Computing"
+author: "Johannes B. Gruber"
+date: 2023-07-24
+format:
+  html:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+bibliography: references.bib
+---
+
+# Introduction
+
+
+# Part 1
+
+
+## Exercises
+
+1.
+
+2.
+
+3.
+
+
+# Part 2
+
+
+## Exercises
+
+1.
+
+2.
+
+3.
+
+# Wrap Up
+
+Save some information about the session for reproducibility.
+
+```{r}
+sessionInfo()
+```
