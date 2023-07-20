@@ -43,7 +43,7 @@
 
       #### Chapter
 
-      #### Coinference Paper
+      #### Conference Paper
 
       #### Patent
 

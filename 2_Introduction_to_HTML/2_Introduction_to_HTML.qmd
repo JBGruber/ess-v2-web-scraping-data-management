@@ -12,7 +12,7 @@ format:
 execute:
   cache: true
   echo: true
-bibliography: references.bib
+bibliography: ../references.bib
 ---
 
 # Introduction
@@ -186,7 +186,9 @@ If you wanted to do research on Twitter data through web-scraping anyway what im
 - HTML (HyperText Markup Language) is the standard markup language for documents designed to be displayed in a web browser
 - Contains the raw data (text, URLs to pictures and videos) plus defines the layout and some of the styling of text
 
-![](https://wikimedia.org/api/rest_v1/media/math/render/svg/37506127f0730d9b6035530f46c706af4e2319d4)
+![](media/html_element.svg)
+
+Image Source: [Wikipedia.org](https://en.wikipedia.org/wiki/HTML_element)
 
 ## Example: Simple
 

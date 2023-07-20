@@ -627,10 +627,10 @@ Then we can create a new virtual environment in the project folder:
 
 ```{r}
 # I build in this if condition to not accidentally overwrite the environment when rerunning the notebook
-if (!reticulate::virtualenv_exists(envname = "./python-env/")) {
-  reticulate::virtualenv_create("./python-env/", python = python_location)
+if (!reticulate::virtualenv_exists(envname = "../python-env/")) {
+  reticulate::virtualenv_create("../python-env/", python = python_location)
 }
-reticulate::virtualenv_exists(envname = "./python-env/")
+reticulate::virtualenv_exists(envname = "../python-env/")
 ```
 
 ### Make sure the Right Environment is Loaded
