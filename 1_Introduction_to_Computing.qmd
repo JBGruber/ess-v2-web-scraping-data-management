@@ -8,21 +8,24 @@ format:
     smaller: true
     scrollable: true
     code-line-numbers: true
+    slide-number: c/t
 execute:
   cache: true
   echo: true
 ---
 
 # Introduction
+## The General Plan for This Course
+
+- We want to teach you web scraping and data management
+- We also want to give you the tools for *reproducible* and *transparent* open science research
+
+
 ## The Plan for Today
 
 In this session, you will get to know some **theory** about web-scraping and get to know the **tools** we will use in this course.
 We will:
 
-- discuss web scraping from a theoretical point of view:
-  - What is web scraping?
-  - Why should you learn it?
-  - What legal and ethical implications should you keep in mind?
 - discuss some useful tools and learn:
   - how to use the **terminal** (and why you should).
   - how to use `git` version control with GitHub (you will get the material for the course in this step).
@@ -30,11 +33,44 @@ We will:
 - go over some principles of using the programming language `R`:
   - `R` Refresher
   - literate programming
+- discuss web scraping from a theoretical point of view:
+  - What is web scraping?
+  - Why should you learn it?
+  - What legal and ethical implications should you keep in mind?
 
 ## Who am I?
 
-## Who are you?
+:::: {.columns}
 
+::: {.column width="60%"}
+- PostDoc at Department of Communication Science at Vrije Universiteit Amsterdam and University of Amsterdam
+- Interested in:
+  - Computational Social Science
+  - Automated Text Analysis
+  - Hybrid Media Systems and Information Flows
+  - Protest and Democracy
+- Experience:
+  - R user for 8 years
+  - R package developer for 6 years
+  - Worked on several packages for text analysis, API access and web scraping (quanteda.textmodels, LexisNexisTools, paperboy, traktok, amcat4-r, and more)
+:::
+
+::: {.column width="40%"}
+![](https://johannesbgruber.eu/img/JBGruber.jpg)
+
+Contact: 
+
+- [{{< fa envelope >}}]{style="color:#2A76DD"} [j.b.gruber@uva.nl](mailto:j.b.gruber@uva.nl) 
+- [{{< fa brands mastodon >}}]{style="color:#2A76DD"} [@JBGruber@fosstodon.org](https://fosstodon.org/@JBGruber)
+- [{{< fa brands twitter >}}]{style="color:#2A76DD"} [@JohannesBGruber](https://twitter.com/JohannesBGruber)
+:::
+
+::::
+
+## Who are you?
+:::: {.columns}
+
+::: {.column width="60%"}
 - What is your name?
 - What are your research interests?
 - What is your experience with:
@@ -44,6 +80,13 @@ We will:
 - Why are you taking this course?
 - Do you have specific plans that include webscraping?
 - What operating system are you using?
+:::
+
+::: {.column width="40%"}
+![](https://images.unsplash.com/photo-1554497342-902a4f8da8ed?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1740&q=80)
+:::
+
+::::
 
 # How to use the terminal (and why you should)
 ## Why use the terminal?
@@ -460,7 +503,7 @@ mtcars |>
   mutate(kpl = mpg * 0.4251)
 ```
 
-Note: You can interject the `View()` command at any line in a complicated pipeline.
+Note: You can interject the `View()` command at any line in a complicated pipeline to see the intermediate result in a spreadsheet-style data viewer.
 
 ### Special package `ggplot2`
 
@@ -468,6 +511,24 @@ Note: You can interject the `View()` command at any line in a complicated pipeli
 - IMO: the best plotting system in any programming/data science language
 - Implements the "Grammar of Graphics": a language for describing custom plots instead of relying on predefined plotting functions
 - The specific logic makes it harder to learn than other packages, but you can express essentially any plots in it (I highly recommend using ["ggplot2: Elegant Graphics for Data Analysis"](https://ggplot2-book.org/) to learn the package instead of individual tutorials)
+
+## Exercises
+
+1. Run ggplot(data = mpg). What do you see and why?
+2. In the function `pb_collect()` from `paperboy`, what do the arguments `ignore_fails` and `connections` do?
+3. Write a function that takes a numeric vector of miles per gallon consumption data and transforms it to kilometer per liter. If anything other than a numeric vector is entered, the fcuntion should display an error (hint: see ?stop).
+4. In the code below, check the sizes of the intermediate objects with `object.size()`.
+
+```{r}
+file_link <- "https://raw.githubusercontent.com/shawn-y-sun/Customer_Analytics_Retail/main/purchase%20data.csv"
+df <- read.csv(file_link)
+filtered_df <- df[df$Age >= 50,]
+aggregated_df <- aggregate(filtered_df$Quantity, by = list(filtered_df$Day), FUN = sum)
+names(aggregated_df) <- c("day", "total_quantity")
+aggregated_df[order(aggregated_df$total_quantity, decreasing = TRUE)[1:5],]
+```
+
+5. How could the code above be improved if you only want the final result, the code should be readable and you care about memory usage?
 
 # Literate Programming
 ## Background
@@ -767,6 +828,12 @@ py$hello()
 py$hello("Class")
 reticulate::py_help(py$hello)
 ```
+
+
+## Exercises
+
+1. Write a Python function that takes a numeric vector of miles per gallon consumption data and transforms it to kilometer per liter. Use the function from within R
+2. Use the function in Python, but using a vector defined in R
 
 # Wrap Up
 
