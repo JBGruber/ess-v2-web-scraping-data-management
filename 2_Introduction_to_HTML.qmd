@@ -1,0 +1,501 @@
+---
+title: "Introduction to Web Scraping and Data Management for Social Scientists"
+subtitle: "Session 2: Introduction to the Web"
+author: "Johannes B. Gruber"
+date: 2023-07-25
+format:
+  revealjs:
+    smaller: true
+    scrollable: true
+    code-line-numbers: true
+    slide-number: c/t
+execute:
+  cache: true
+  echo: true
+bibliography: references.bib
+---
+
+# Introduction
+## The Plan for Today
+
+In this session, you will get to know some **theory** about web-scraping and get to know the **tools** we will use in this course.
+We will:
+
+- discuss web scraping from a theoretical point of view:
+  - What is web scraping?
+  - Why should you learn it?
+  - What legal and ethical implications should you keep in mind?
+- learn a bit more about how the Internet works
+  - What is HTML
+  - What is CSS
+
+# What is Web Scraping
+## Forms to get data from the web
+
+:::: {.columns}
+
+::: {.column width="50%"}
+- Download data from a website
+- Retrieve data via an API
+- Scrape the (unstructured) Data
+:::
+
+::: {.column width="50%"}
+![](media/dataset.png)
+![Image Source: daveberesford.co.uk](https://daveberesford.co.uk/wp-content/uploads/2019/02/data-scraping-960x594.png)
+:::
+::::
+
+## Web Scraping
+
+::: {.incremental}
+- A technique to extract specific data from a web page
+  - Get the author, title, date and body of an only news article
+  - A table from a website (like Wikipedia)
+- This can include hyperlinks which you can systematically go through
+- You can write a "robot" that systematically extracts data and saves it in a format convenient for analysis
+  - All news about a specific topic from a news site
+  - All press releases from a political party website
+  - All Posts on a web forum about a specific topic
+  - All participants of an event from the event's website
+- A web-scraper is a program that goes to web pages, downloads the contents, extracts data out of the contents and then saves the data to a file or a database
+- Unfortunately not one-size-fits-all solution
+  - Lots of different techniques, tools, tricks
+  - Websites change (some more frequently than others)
+  - Some websites make it hard for you (by accident or on purpose!)
+:::
+
+## Web Scraping: A Three-Step Process
+
+1. Send an HTTP request to the webpage -> server responds to the request by returning HTML content
+2. Parse the HTML content -> extract the information you want from the nested structure of HTML code
+3. Wrangle the data into a useful format
+
+![Original Image Source: prowebscraper.com](media/web_scraping_steps.png)
+
+## Hurdles
+
+:::: {.columns}
+
+::: {.column width="40%" .incremental}
+Some web pages are easier to scrape than others:
+
+1. Well behaved static HTML with recurring patterns
+2. Haphazard HTML not clearly differentiating between different types of information
+3. Interactive web sites loading content by executing code (usually JavaScript or PHP)
+4. Interactive web sites with mechanisms against data extraction (rate limits, captchas etc.)
+:::
+
+::: {.column width="60%"}
+![](https://hackernoon.com/hn-images/0*MPt2rectMhwklT63.jpg)
+:::
+::::
+
+## Exercises
+
+1.
+
+2.
+
+3.
+
+# Why Should You Learn Web Scraping?
+
+:::: {.columns}
+
+::: {.column width="50%"}
+- The internet is a data gold mine!
+- Data was not created for research, but are often traces of what people are *actually* doing on the internet
+- Reproducible and renewable data collection (e.g., rehydrate data that is copyrighted)
+- Web Scraping let's you automate data retrieval (as opposed to using tedious copy & past on some web site)
+- It's one of the most fun tasks to learn R and programming!
+  - It's engaging and satisfying to find repeating patterns that you can employ to structure data (every website becomes a little puzzle)
+  - It touches on many important computational skills
+  - The return is good data to further your career (unlike sudokus or video games)
+:::
+
+::: {.column width="50%"}
+![\@realDonaldTrump Twitter usage @clarketrump2019](https://journals.plos.org/plosone/article/figure/image?size=large&id=10.1371/journal.pone.0222062.g002)
+:::
+::::
+
+## Exercises
+
+1. Discuss in class: What data would you like to be able to retrieve after the course and why?
+
+# Implications of Web Scraping
+## Legal
+
+Web Scraping is not a shady or illegal activity, **but** not all web scraping is unproblematic and the **data** does not become **yours**.
+
+::: {.incremental}
+- Collecting **personal data** of people in the EU might violate GDPR (General Data Protection Regulation)
+  - The GDPR defines personal data as "any information relating to an identified or identifiable natural person." (Art. 4 [GDPR](https://gdpr-info.eu/art-4-gdpr/))
+  - Exceptions
+    - if you get consent from the people whose data it is
+    - personal data processing is legitimate when "necessary for the performance of a task carried out in the public interest" (Art. 6 [GDPR](https://gdpr-info.eu/art-6-gdpr/))
+- Collecting **copyrighted** data
+  - Complicated legal situation
+  - Public facing content is probably okay ([9th circuit ruling](https://www.vice.com/en/article/9kek83/linkedin-data-scraping-lawsuit-shot-down))
+  - You will probably get in trouble if you distribute the material
+  - "there have been no lawsuits in [...] major western democratic countries stemming from a researcher scraping publicly accessible data from a website for personal or academic use." [@luscombewebscraping2022]
+- Honouring Terms of Service and robots.txt
+  - Many companies have ToS that might prohibit you from scraping (these are not laws, might not be binding and whether they can be enforced is a separate question)
+  - /robots.txt is often where guidelines are communicated to automated crawlers
+:::
+
+## ToS and Robots.txt
+
+![](media/twitter.com_en_tos.png)
+
+[Twitter ToS](https://twitter.com/en/tos#intlTerms)
+
+```html
+User-agent: *                         # the rules apply to all user agents
+Disallow: /EPiServer/CMS/             # do not crawl any URLs that start with /EPiServer/CMS/
+Disallow: /Util/                      # do not crawl any URLs that start with /Util/ 
+Disallow: /about/art-in-parliament/   # do not crawl any URLs that start with /about/art-in-parliament/
+```
+<https://www.parliament.uk/robots.txt>
+
+
+## Ethical
+
+- Are there other means available to get to the data (e.g., via an API)?
+- `robots.txt` might not be legally binding, but it is not nice to ignore it
+- Scraping can put a heavy load on website (if you make 1000s of requests) which costs the hosts money and might bring down a site ([DDoS attack](https://en.wikipedia.org/wiki/Denial-of-service_attack))
+- Think twice before scraping personal data. You should ask yourself:
+  - is it necessary for your research?
+  - are you harming anyone by obtaining (or distributing) the data?
+  - do you really need everything or are parts of the data sufficient (e.g., can you preselect cases or ignore variables)
+
+## Exercises
+
+Twitter recently made access to their API punishingly expensive and stopped free academic access for research.
+If you wanted to do research on Twitter data through web-scraping anyway what implications would that have:
+
+1. Legally
+
+2. Ethically
+
+3. Practical
+
+
+# What are HTML and CSS
+## What is HTML
+- HTML (HyperText Markup Language) is the standard markup language for documents designed to be displayed in a web browser
+- Contains the raw data (text, URLs to pictures and videos) plus defines the layout and some of the styling of text
+
+![](https://wikimedia.org/api/rest_v1/media/math/render/svg/37506127f0730d9b6035530f46c706af4e2319d4)
+
+## Example: Simple
+
+:::: {.columns}
+
+::: {.column width="50%"}
+Code:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Simple HTML Page</title>
+</head>
+<body>
+    <p>This is the body of the text.</p>
+</body>
+</html>
+```
+:::
+
+::: {.column width="50%"}
+Browser View:
+
+![](media/html-1.png)
+:::
+::::
+
+## Example: With headline and author
+
+:::: {.columns}
+::: {.column width="50%"}
+Code:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Simple HTML Page</title>
+</head>
+<body>
+    <h1>My Headline</h1>
+    <p class="author" href="https://www.johannesbgruber.eu/">Me</p>
+    <p>This is the body of the text.</p>
+</body>
+</html>
+```
+:::
+
+::: {.column width="50%"}
+Browser View:
+
+![](media/html-2.png)
+:::
+::::
+
+## Example: With some data
+
+:::: {.columns}
+::: {.column width="50%" height="50%"}
+Code:
+
+```{html}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Simple HTML Page</title>
+</head>
+<body>
+    <h1>My Headline</h1>
+    <p class="author">Me</p>
+    <p>This is the body of the text.</p>
+    <p>Consider this data:</p>
+    <table>
+        <tr>
+            <th>Name</th>
+            <th>Age</th>
+        </tr>
+        <tr>
+            <td>John</td>
+            <td>25</td>
+        </tr>
+        <tr>
+            <td>Mary</td>
+            <td>26</td>
+        </tr>
+    </table>
+</body>
+</html>
+```
+:::
+
+::: {.column width="50%"}
+Browser View:
+
+![](media/html-3.png)
+:::
+::::
+
+## Example: With an image
+
+:::: {.columns}
+::: {.column width="50%"}
+Code:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Simple HTML Page</title>
+</head>
+<body>
+    <h1>My Headline</h1>
+    <p class="author">Me</p>
+    <p>This is the body of the text.</p>
+    <p>Consider this image:</p>
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/About_The_Dog.jpg/640px-About_The_Dog.jpg" alt="About The Dog.">
+</body>
+</html>
+```
+:::
+
+::: {.column width="50%"}
+Browser View:
+
+![](media/html-4.png)
+:::
+::::
+
+## Example: With a link
+
+:::: {.columns}
+::: {.column width="50%"}
+Code:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Simple HTML Page</title>
+</head>
+<body>
+    <h1>My Headline</h1>
+    <a href="https://www.johannesbgruber.eu/">
+      <p class="author">Me</p>
+    </a>
+    <p>This is the body of the text.</p>
+</body>
+</html>
+```
+:::
+
+::: {.column width="50%"}
+Browser View:
+
+![](media/html-4.png)
+:::
+::::
+
+## What is CSS
+
+- CSS (Cascading Style Sheets) is very often used in addition to HTML to control the presentation of a document
+- Designed to enable the separation of *content* from things concerning the *look*, such as layout, colours, and fonts.
+- The reason it is interesting for web scraping is that **certain information often get the same styling**
+
+## Example: CSS
+
+:::: {.columns}
+::: {.column width="50%"}
+HTML:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Simple HTML Page</title>
+    <link rel="stylesheet" type="text/css" href="example.css">
+</head>
+<body>
+  <h1 class="headline">My Headline</h1>
+  <p class="author">Me</p>
+  <div class="content">
+    <p>This is the body of the text.</p>
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/About_The_Dog.jpg/640px-About_The_Dog.jpg" alt="About The Dog.">
+    <p>Consider this data:</p>
+    <table>
+      <tr class="top-row">
+          <th>Name</th>
+          <th>Age</th>
+      </tr>
+      <tr>
+          <td>John</td>
+          <td>25</td>
+      </tr>
+      <tr>
+          <td>Mary</td>
+          <td>26</td>
+      </tr>
+    </table>
+  </div>
+</body>
+</body>
+</html>
+
+```
+
+CSS:
+
+```css
+/* CSS file */
+
+.headline {
+  color: red;
+}
+
+.author {
+  color: grey;
+  font-style: italic;
+  font-weight: bold;
+}
+
+.top-row {
+  background-color: lightgrey;
+}
+
+.content img {
+  border: 2px solid black;
+}
+
+table, th, td {
+  border: 1px solid black;
+}
+```
+:::
+
+::: {.column width="50%"}
+Browser View:
+
+![](media/css.png)
+:::
+::::
+
+# HTMl and CSS in Web Scraping: a preview
+## Using HTML tags:
+
+You can select HTML elements by their tags
+
+```{r}
+library(rvest)
+read_html("data/example.html") |> 
+  html_elements("p") |> 
+  html_text()
+```
+
+- written without the `<>`
+- in theory, arbirary tags are possible, but commonly people use `<p>` (paragraph), `<br>` (line break), `<h1>`, `<h2>`, `<h3>`, ... (first, second, third, ... level headline), `<b>` (bold), `<i>` (italic), `<img>` (image), `<href>` (hyperlink), and a couple more.
+
+## Using attributes
+
+You can select elements by an attribute, including the class:
+
+```{r}
+read_html("data/example.html") |> 
+  html_elements("[class=\"headline\"]") |> 
+  html_text()
+```
+
+For `class`, there is also a shorthand:
+
+```{r}
+read_html("data/example.html") |> 
+  html_elements(".headline") |> 
+  html_text()
+```
+
+## Extracting attributes
+
+Instead of selecting by arrtibute, you can also extract an attribute:
+
+```{r}
+read_html("data/example.html") |> 
+  html_elements("a") |> 
+  html_attr("href")
+```
+
+### Chaining selectors
+
+If there is more than one element that fits your selector, but you only want one of them, see if you can make your selection more specific by chaining selectors with `>`:
+
+```{r}
+read_html("data/example.html") |> 
+  html_elements(".author>a") |> 
+  html_attr("href")
+```
+
+## Exercises
+
+1. Add another image and another paragraph to `data/example.html` and display it in your browser
+2. Add a second level headline to the page
+3. Add another image to the page
+4. Manipulate the files `data/example.html` and/or `data/example.css` so that "content" is displayed in italics
+5. Practice finding the right selector with the CSS Diner game (<https://flukeout.github.io/>)
+
+# Wrap Up
+
+Save some information about the session for reproducibility.
+
+```{r}
+sessionInfo()
+```
+
+# References
