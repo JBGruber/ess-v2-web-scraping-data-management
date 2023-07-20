@@ -1,0 +1,337 @@
+---
+title: "Introduction to Web Scraping and Data Management for Social Scientists"
+subtitle: "Session 3: Scraping Static Web Pages"
+author: "Johannes B. Gruber"
+date: 2023-07-26
+format:
+  revealjs:
+    smaller: true
+    scrollable: true
+    code-line-numbers: true
+    slide-number: c/t
+execute:
+  cache: true
+  echo: true
+bibliography: ../references.bib
+---
+
+# Introduction
+## The Plan for Today
+
+:::: {.columns}
+
+::: {.column width="60%"}
+In this session, we trap some **docile data** that wants to be found.
+We will:
+
+- Go over some parsing examples:
+  - Wikipedia: World World Happiness Report
+- Discuss some examples of good approaches to data wrangling
+- Go into a bit more detail on requesting raw data
+  
+![Original Image Source: prowebscraper.com](media/web_scraping_steps.png)
+:::
+
+::: {.column width="40%" }
+![](https://images.unsplash.com/photo-1534361960057-19889db9621e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1740&q=80)
+[Joe Caione](https://unsplash.com/@joeyc) via unsplash.com
+:::
+
+::::
+
+
+```{css}
+#| echo: false
+
+.datatables {
+  font-size: smaller;
+}
+
+```
+
+# Example: World Happiness Report
+## Use your Browser to Scout
+
+:::: {.columns}
+
+::: {.column width="45%"}
+[
+  ![](media/en.wikipedia.org_wiki_World_Happiness_Report.png)
+](https://en.wikipedia.org/wiki/World_Happiness_Report)
+![](media/en.wikipedia.org_wiki_World_Happiness_Report_table.png)
+:::
+
+::: {.column width="50%" }
+![](media/en.wikipedia.org_wiki_World_Happiness_Report_code.png)
+:::
+
+::::
+
+## Use your Browser's `Inspect` tool
+
+![](media/inspect-view.png)
+
+*Note: Might not be available on all browsers; use Chromium-based or Firefox.*
+
+## Use `rvest` to scrape
+
+:::: {.columns}
+
+::: {.column width="45%"}
+```{r}
+library(rvest)
+library(tidyverse)
+
+# 1. Request & collect raw html
+html <- read_html("https://en.wikipedia.org/wiki/World_Happiness_Report")
+
+# 2. Parse
+happy_table <- html |> 
+  html_elements(".wikitable") |> # select the right element
+  html_table() |>                # special function for tables
+  pluck(3)                       # select the third table
+
+# 3. No wrangling necessary
+happy_table
+```
+:::
+
+::: {.column width="50%" }
+```{r}
+## Plot relationship wealth and life expectancy
+ggplot(happy_table, aes(x = `GDP per capita`, y = `Healthy life expectancy`)) + 
+  geom_point() + 
+  geom_smooth(method = 'lm')
+```
+
+:::
+::::
+
+## Exercises
+
+1. Get the table with 2023 opinion polling for the next United Kingdom general election from <https://en.wikipedia.org/wiki/Opinion_polling_for_the_next_United_Kingdom_general_election>
+
+```{r}
+# 1. Request & collect raw html
+html <- read_html("https://en.wikipedia.org/wiki/Opinion_polling_for_the_next_United_Kingdom_general_election")
+
+# 2. Parse
+opinion_table <- html %>%
+  html_elements(".wikitable") |> 
+  html_table() |>                
+  pluck(1)                       
+```
+
+2. Wrangle and plot the data opinion polls
+
+```{r}
+# 3. Wrangle
+opinion_tidy <- opinion_table |> 
+  pivot_longer(Con:Others, names_to = "party", values_to = "result") |> 
+  filter(!str_detect(result, fixed(".mw-parser-output"))) |> 
+  mutate(result_pct = as.integer(str_extract(result, "\\d+(?=%)")),
+         date_clean = str_extract(Datesconducted, "\\d{1,2} [A-z]{3}"),
+         date = lubridate::dmy(paste(date_clean, 2023))) |> 
+  filter(!is.na(result_pct), 
+         date < "2023-07-20")
+
+# Plot!
+opinion_tidy |> 
+  ggplot(aes(x = date, y = result_pct, colour = party)) +
+  geom_line()
+```
+
+# Example: IC2S2 2023
+## What do we want
+
+
+:::: {.columns}
+
+::: {.column width="45%"}
+- General goal in the course: we want to build a database of conference attendance and link this to researchers
+- So for each website:
+  - Speakers
+  - (Co-)authors
+  - Paper/talk titles
+  - Panel (to see who was in the same ones)
+- In the next session we will also collect some researcher data
+:::
+
+::: {.column width="50%" }
+[
+  ![](media/ic2s2.png)
+](https://www.ic2s2.org/program.html)
+:::
+
+::::
+
+## Let's scrape! Exercise
+
+I started the code below, now it's your turn to finish it:
+
+```{r}
+#| eval: false
+# 1. Request & collect raw html
+html <- read_html("https://www.ic2s2.org/program.html")
+
+sessions <- html |> 
+  html_elements(".nav_list")
+
+# 2. Parse
+talks <- sessions |> 
+  html_elements("li")
+
+talks_titles <- talks |> 
+  html_elements("") |> 
+  html_text()
+
+talks_speaker <- talks |> 
+  html_elements("") |> 
+  html_text()
+
+talks_authors <- talks |> 
+  html_elements("") |> 
+  html_text()
+```
+
+## Let's scrape! Solution
+
+```{r}
+# 1. Request & collect raw html
+html <- read_html("https://www.ic2s2.org/program.html")
+
+sessions <- html |> 
+  html_elements(".nav_list")
+
+# 2. Parse
+talks <- sessions |> 
+  html_elements("li")
+
+talks_titles <- talks |> 
+  html_elements("b") |> 
+  html_text()
+
+talks_speaker <- talks |> 
+  html_elements("u") |> 
+  html_text()
+
+talks_authors <- talks |> 
+  html_elements("i") |> 
+  html_text()
+```
+
+```{r}
+#| error: true
+#| class: fragment
+# 3. Wrangle
+ic2s2_program <- tibble(talks_titles, talks_speaker, talks_authors)
+```
+
+```{r}
+#| class: fragment
+length(talks_titles)
+length(talks_speaker)
+length(talks_authors)
+```
+
+## Let's scrape (a little better)!
+
+:::: {.columns}
+
+::: {.column width="45%"}
+```{r}
+talks <- sessions |> 
+  html_elements("li")
+
+parse_talks <- function(x) {
+  title <- x |> 
+    html_elements("b") |> 
+    html_text()
+  
+  speaker <- x |> 
+    html_elements("u") |> 
+    html_text()
+  
+  author <- x |> 
+    html_elements("i") |> 
+    html_text()
+  tibble(title, speaker, author)
+}
+
+parse_talks(talks[[1]])
+```
+:::
+
+::: {.column width="50%" }
+```{r}
+#| class: fragment
+talks_data <- map(talks, parse_talks) |> 
+  bind_rows() |> 
+  separate(col = title, into = c("time", "title"), sep = " - ")
+talks_data
+```
+:::
+
+::::
+
+
+
+## But What about Sessions?
+
+```{r}
+titles <- html |> 
+  html_elements(".wrapper.style2") |> 
+  html_elements(":not(header)>h2")
+length(titles)
+
+sessions <- html |> 
+  html_elements(".wrapper.style2") |> 
+  html_elements("ul")
+length(sessions)
+```
+
+```{r}
+#| class: fragment
+talks_data <- map2(titles, sessions, function(x, y) {
+  chair <- x |> 
+    html_element("i") |> 
+    html_text()
+    
+  session_title <- x |> 
+    html_text() |> 
+    str_remove(chair)
+  
+  y |> 
+    html_elements("li") |> 
+    map(parse_talks) |> 
+    bind_rows() |> 
+    mutate(session = session_title, chair = chair, .before = 1)
+  
+}) |> 
+  bind_rows()
+```
+
+
+# 2023 APSA Annual Meeting & Exhibition
+
+# EPSA's 2021 annual conference
+
+```{r}
+html <- read_html("https://coms.events/epsa2021/en/day_1.html")
+
+sessions <- html |> 
+  html_elements(".session_desc") |> 
+  html_elements(".txt1") |> 
+  html_text2()
+```
+
+# CompText
+
+
+# Wrap Up
+
+Save some information about the session for reproducibility.
+
+```{r}
+sessionInfo()
+```

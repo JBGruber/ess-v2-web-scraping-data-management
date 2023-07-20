@@ -23,7 +23,10 @@ execute:
 
 ## The Plan for Today
 
-In this session, you will get to know some **theory** about web-scraping and get to know the **tools** we will use in this course.
+:::: {.columns}
+
+::: {.column width="60%"}
+In this session, you learn how to use the **tools** of the hunt.
 We will:
 
 - discuss some useful tools and learn:
@@ -33,10 +36,15 @@ We will:
 - go over some principles of using the programming language `R`:
   - `R` Refresher
   - literate programming
-- discuss web scraping from a theoretical point of view:
-  - What is web scraping?
-  - Why should you learn it?
-  - What legal and ethical implications should you keep in mind?
+:::
+
+::: {.column width="30%" }
+![](https://images.unsplash.com/photo-1590585382453-8b749e9d5224?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=600&q=80)
+[Woody Kelly](https://unsplash.com/@woodkell) via unsplash.com
+:::
+
+::::
+
 
 ## Who am I?
 

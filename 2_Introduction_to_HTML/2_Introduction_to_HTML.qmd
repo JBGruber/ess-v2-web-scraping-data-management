@@ -18,7 +18,10 @@ bibliography: ../references.bib
 # Introduction
 ## The Plan for Today
 
-In this session, you will get to know some **theory** about web-scraping and get to know the **tools** we will use in this course.
+:::: {.columns}
+
+::: {.column width="60%"}
+In this session, we learn how to **scout** data in the wild.
 We will:
 
 - discuss web scraping from a theoretical point of view:
@@ -28,6 +31,14 @@ We will:
 - learn a bit more about how the Internet works
   - What is HTML
   - What is CSS
+:::
+
+::: {.column width="40%" }
+![](https://images.unsplash.com/photo-1585615711517-b22136b2019f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1548&q=80)
+[Angie Gade](https://unsplash.com/@angiefeelstherush) via unsplash.com
+:::
+
+::::
 
 # What is Web Scraping
 ## Forms to get data from the web

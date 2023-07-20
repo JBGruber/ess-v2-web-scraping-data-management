@@ -10,11 +10,11 @@ This is the course material for the Essex Summer School in Social Science Data A
 
 | time        | Session                                  |
 |-------------|------------------------------------------|
-| Day  1      | Introduction                             |
-| Day  2      | Introduction to the Web                  |
-| Day  3      | Scraping Static Web Pages                |
-| Day  4      | Scraping Interactive Web Pages           |
-| Day  5      | Application Programming Interface (APIs) |
+| Day 1       | Introduction                             |
+| Day 2       | Introduction to the Web                  |
+| Day 3       | Scraping Static Web Pages                |
+| Day 4       | Application Programming Interface (APIs) |
+| Day 5       | Scraping Interactive Web Pages           |
 | Day 6       | Basic SQL                                |
 | Day 7       | Importing Data                           |
 | Day 8       | Linking and joining data                 |
@@ -60,7 +60,7 @@ Your task: Hand in your research abstract
 
 ## Day 2    Introduction to the Web                   
 
-In this session, we learn how to scout data in the wild. 
+In this session, we learn how to scout data in the wild. For this, we need to understand the rules of the wild.
 
 
 ## Day 3    Static Web Pages                         
@@ -68,17 +68,18 @@ In this session, we learn how to scout data in the wild.
 In this session, we trap some docile data that wants to be found. 
 
 
-## Day 4    Interactive Web Pages                     
+## Day 4    Application Programming Interface (APIs)  
+
+In this session, we learn how to get obtain data from someone else. 
+
+
+
+## Day 5    Interactive Web Pages                     
 
 In this session, we learn how to hunt down wild data. 
 
 
 Your task: Choose your webpage. Apply your knowledge 
-
-
-## Day 5    Application Programming Interface (APIs)  
-
-In this session, we learn how to get caged data. 
 
 ## Day 6    Basic Data Structures & SQL                                 
 
