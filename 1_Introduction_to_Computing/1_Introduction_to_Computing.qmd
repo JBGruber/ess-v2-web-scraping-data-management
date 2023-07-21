@@ -843,6 +843,10 @@ reticulate::py_help(py$hello)
 1. Write a Python function that takes a numeric vector of miles per gallon consumption data and transforms it to kilometer per liter. Use the function from within R
 2. Use the function in Python, but using a vector defined in R
 
+# Homework
+
+You did not come to class to just scrape exercise pages.
+
 # Wrap Up
 
 Save some information about the session for reproducibility.

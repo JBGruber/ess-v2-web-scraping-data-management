@@ -102,15 +102,7 @@ Some web pages are easier to scrape than others:
 :::
 ::::
 
-## Exercises
-
-1.
-
-2.
-
-3.
-
-# Why Should You Learn Web Scraping?
+## Why Should You Learn Web Scraping?
 
 :::: {.columns}
 
@@ -455,7 +447,7 @@ read_html("data/example.html") |>
 ```
 
 - written without the `<>`
-- in theory, arbirary tags are possible, but commonly people use `<p>` (paragraph), `<br>` (line break), `<h1>`, `<h2>`, `<h3>`, ... (first, second, third, ... level headline), `<b>` (bold), `<i>` (italic), `<img>` (image), `<href>` (hyperlink), and a couple more.
+- in theory, arbitrary tags are possible, but commonly people use `<p>` (paragraph), `<br>` (line break), `<h1>`, `<h2>`, `<h3>`, ... (first, second, third, ... level headline), `<b>` (bold), `<i>` (italic), `<img>` (image), `<href>` (hyperlink), and a couple more.
 
 ## Using attributes
 
@@ -463,7 +455,7 @@ You can select elements by an attribute, including the class:
 
 ```{r}
 read_html("data/example.html") |> 
-  html_elements("[class=\"headline\"]") |> 
+  html_element("[class=\"headline\"]") |> 
   html_text()
 ```
 
@@ -471,8 +463,20 @@ For `class`, there is also a shorthand:
 
 ```{r}
 read_html("data/example.html") |> 
-  html_elements(".headline") |> 
+  html_element(".headline") |> 
   html_text()
+```
+
+Another important shorthand is `#`, which selects the `id` attribute:
+
+```{r}
+read_html("data/example.html") |> 
+  html_element("#table-1") |> 
+  html_table()
+
+read_html("data/example.html") %>% 
+  html_element("#table-1 > tr")
+
 ```
 
 ## Extracting attributes
@@ -485,7 +489,7 @@ read_html("data/example.html") |>
   html_attr("href")
 ```
 
-### Chaining selectors
+## Chaining selectors
 
 If there is more than one element that fits your selector, but you only want one of them, see if you can make your selection more specific by chaining selectors with `>`:
 
@@ -495,6 +499,21 @@ read_html("data/example.html") |>
   html_attr("href")
 ```
 
+## Common Selectors
+
+There are quite a lot of [CSS selectors](https://www.w3schools.com/cssref/css_selectors.asp), but often you can stick to just a few:
+
+| selector      | example           | Selects                                                |
+|---------------|-------------------|--------------------------------------------------------|
+| element/tag   | `table`           | **all** `<table>` elements                             |
+| class         | `.someTable`      | **all** elements with `class="someTable"`              |
+| id            | `#table-1         | **unique** element with `id="table-1"`                 |
+| element.class | `tr.headerRow`    | **all** `<tr>` elements with the `someTable` class     |
+| class1.class2 | `.someTable.blue` | **all** elements with the `someTable` AND `blue` class |
+| class1 > tag  | `.table-1 > tr`   | **all** elements with `tr` with `.table-1` as parent   |
+| class1 + tag  | `.top-row + tr`   | **first** elements with `tr` following `.top-row`      |
+
+
 ## Exercises
 
 1. Add another image and another paragraph to `data/example.html` and display it in your browser
@@ -502,6 +521,52 @@ read_html("data/example.html") |>
 3. Add another image to the page
 4. Manipulate the files `data/example.html` and/or `data/example.css` so that "content" is displayed in italics
 5. Practice finding the right selector with the CSS Diner game (<https://flukeout.github.io/>)
+6. Consider the toy HTML example below. Which selectors do you need to put into `html_elements()` (which extracts all elements matching the selector) to extract the information
+
+
+```{r}
+library(rvest)
+webpage <- "<html>
+<body>
+  <h1>Computational Research in the Post-API Age</h1>
+  <div class='author'>Deen Freelon</div>
+  <div>Keywords:
+    <ul>
+      <li>API</li>
+      <li>computational</li>
+      <li>Facebook</li>
+    </ul>
+  </div>
+  <div class='text'>
+    <p>Three pieces of advice on whether and how to scrape from Dan Freelon</p>
+  </div>
+  
+  <ol class='advice'>
+    <li id='one'> use authorized methods whenever possible </li>
+    <li id='two'> do not confuse terms of service compliance with data protection </li>
+    <li id='three'> understand the risks of violating terms of service </li>
+  </ol>
+
+</body>
+</html>" |> 
+  read_html()
+
+# the headline
+headline <- html_elements(webpage, "")
+# the author
+author <- html_elements(webpage, "")
+# the ordered list
+ordered_list <- html_elements(webpage, "")
+# all bullet points
+bullet_points <- html_elements(webpage, "")
+# bullet points in unordered list
+bullet_points_unordered <- html_elements(webpage, "")
+# bullet points in ordered list
+bullet_points_ordered <- html_elements(webpage, "")
+# third bullet point in ordered list
+bullet_point_three_ordered <- html_elements(webpage, "")
+```
+
 
 # Wrap Up
 
