@@ -9,9 +9,11 @@ format:
     scrollable: true
     code-line-numbers: true
     slide-number: c/t
+    logo: https://essexsummerschool.com/wp-content/uploads/2016/03/essex_logo-mobile.svg
 execute:
   cache: true
   echo: true
+highlight-style: pygments
 ---
 
 # Introduction
@@ -220,7 +222,8 @@ A pull request is a way to propose changes from your fork or branch to the origi
 
 1. Fork the course repository on GitHub
 2. Clone the course repository to your computer
-3. In the folder "participants" add your details to the file "participants.csv" (if you feel uncomfortable sharing your details with the class, just add "-" to all columns)
+3. In the folder "participants" copy the file "participants.csv" and name the copy "participatns_YOUR_NAME" 
+4. Fill in your details (if you feel uncomfortable sharing your details with the class and on the public GitHub site, just add "-" to some or all columns)
 4. Commit and push your changes
 5. Make a pull request to the main repo
 6. Optional: After I have merged your pull request, you can set your fork to private and add me and Marius as collaborators (you will submit your homework that way)
@@ -615,7 +618,10 @@ The easiest way to install Python for `R` projects is through `reticulate`:
 reticulate::install_miniconda()
 ```
 
-Note that `system("whereis python")` will not pick up this installation. Instead you can find the path using:
+Note, however, that your user name can not contain space or special characters.
+If that is the case, you should install miniconda on a different location than the default.
+For example `reticulate::install_miniconda(path = "C:/tools/miniconda")` (you need to create the folder `C:/tools` manually).
+Also note that `system("whereis python")` will not pick up this installation. Instead you can find the path using:
 
 ```{r}
 reticulate::miniconda_path()
@@ -846,11 +852,18 @@ reticulate::py_help(py$hello)
 # Homework
 
 You did not come to class to just scrape exercise pages.
+You probably had some initial data and/or research question in mind.
+Please write a short abstract (~200-400 words) on what you want to accomplish with the web scraping skill you will learn here, so we can try and incorporate the necessary tools in one of the sessions this week.
+The abstract should include what data can be found on the website and what potential research quesions you have in mind.
+
+Deadline: Tuesday midnight
 
 # Wrap Up
 
 Save some information about the session for reproducibility.
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Show Session Info"
 sessionInfo()
 ```
