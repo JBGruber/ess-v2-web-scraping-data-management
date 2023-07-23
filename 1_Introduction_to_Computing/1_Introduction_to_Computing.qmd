@@ -651,9 +651,9 @@ reticulate::virtualenv_exists(envname = "../python-env/")
 
 ```{r}
 if (R.Version()$os == "mingw32") {
-  python_path <- file.path(getwd(), "python-env/Scripts/python.exe")
+  python_path <- "../python-env/Scripts/python.exe"
 } else {
-  python_path <- file.path(getwd(), "python-env/bin/python")
+  python_path <- "../python-env/bin/python"
 }
 python_path
 file.exists(python_path)

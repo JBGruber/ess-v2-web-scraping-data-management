@@ -64,13 +64,13 @@ Your task: Hand in your research abstract
 
 In this session, we trap some docile data that wants to be found.
 
-Your task: Find a conference that uses a static website and scrape the data as we have donw in class (note: if you find non-static pages, also note them, we’ll need them later)
+Your task: Find a conference that uses a static website and scrape the data as we have done in class (note: if you find non-static pages, also note them, we can have a look at them later)
 
 ## Day 4 Application Programming Interface (APIs)
 
 In this session, we learn how to get obtain data from someone else.
 
-Your task: Find and parse information about the authors
+Your task: Find and parse information about the authors you found on the conference website youscraped before
 
 ## Day 5 Interactive Web Pages
 
