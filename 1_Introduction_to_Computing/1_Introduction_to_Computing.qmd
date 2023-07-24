@@ -10,6 +10,7 @@ format:
     code-line-numbers: true
     slide-number: c/t
     logo: https://essexsummerschool.com/wp-content/uploads/2016/03/essex_logo-mobile.svg
+    self-contained: true
 execute:
   cache: true
   echo: true
@@ -19,9 +20,10 @@ highlight-style: pygments
 # Introduction
 ## The General Plan for This Course
 
+::: {.r-fit-text}
 - We want to teach you web scraping and data management
 - We also want to give you the tools for *reproducible* and *transparent* open science research
-
+:::
 
 ## The Plan for Today
 
@@ -126,7 +128,7 @@ While graphical user interfaces (GUIs) can be more visually intuitive and user-f
 
 ![](media/terminal-ssh.png)
 
-## Exercises
+## Exercises 1
 
 1. Install `git` (and if you are on Windows `unxutils`) through a package manager
 2. Look around what other software you might want to install
@@ -168,10 +170,10 @@ If you make a mistake, or simply want to go back to an earlier version of your p
 
 ## How to revert
 
-If you want to make an older commit the current version, use `git revert`.
+If you want to undo the changes made in one commit, use `git revert`.
 
 1. Check the history of your git repository with `git log`
-2. Copy the hash of the commit you want to revert to
+2. Copy the hash of the commit you want to undo
 3. Then, you can use `git revert --no-commit [commit hash]` to go back to an earlier status of your repository
 4. `git commit -m "Your commit message"`
 
@@ -182,7 +184,7 @@ Branching in `git` allows you to create a separate version of your project to de
 1. To create a new branch, use `git branch branch-name`.
 2. To switch to your newly created branch, use `git checkout branch-name`.
 3. You can make changes here
-4. You can go back to the main branch with `git branch master`
+4. You can go back to the main branch with `git checkout master`
 
 ## How to rebase
 
@@ -218,7 +220,7 @@ A pull request is a way to propose changes from your fork or branch to the origi
 ![](media/pr.png)
 
 
-## Exercises
+## Exercises 2
 
 1. Fork the course repository on GitHub
 2. Clone the course repository to your computer
@@ -245,13 +247,13 @@ library(tidyverse)
 If you do not want to attach an entire package, you can use the Double Colon to only use a specific function:
 
 ```{r}
-#| eval: false
 dplyr::select(iris, Sepal.Length)
 ```
 
 Less often used, you can also do this with `library`:
 
 ```{r}
+#| eval: false
 library("dplyr", include.only = c("select", "mutate"))
 mutate(iris, sepal_length = Sepal.Length * 10) |> 
   select(sepal_length)
@@ -262,6 +264,8 @@ mutate(iris, sepal_length = Sepal.Length * 10) |>
 - Central repository for `R` packages
 - Rigorous policies and testing
 - Currently almost 20k packages (July 2023)
+
+![](https://gist.github.com/daroczig/3cf06d6db4be2bbe3368/raw/c6e74a90d262be7998e67d464314a8cd7a2b05ed/number-of-submitted-packages-to-CRAN.png)
 
 ## Other sources?
 
@@ -441,9 +445,13 @@ if (1 + 1 == 2) {
 }
 ```
 
+You can extend this with `else`, which is executed when the original condition is `FALSE`:
+
 ```{r}
 if (1 + 2 == 2) {
   "Hello!"
+} else {
+  "Bye"
 }
 ```
 
@@ -498,12 +506,20 @@ transform(aggregate(. ~ cyl, data = subset(mtcars, hp > 100), FUN = function(x) 
 You Can make this more readable by createing intermediate objects:
 
 ```{r}
-data1 <- subset(df, hp > 100) # take subset of original data
+data1 <- subset(mtcars, hp > 100) # take subset of original data
 data2 <- aggregate(. ~ cyl, data = data1, FUN = function(x) round(mean(x, 2))) # aggregate by taking rounded mean
 transform(data2, kpl = mpg * 0.4251) # convert miles per gallon to kilometer per liter
 ```
 
 Or you use the pipe:
+
+```{r}
+subset(mtcars, hp > 100) |> 
+  aggregate(. ~ cyl, data = _, FUN = function(x) round(mean(x, 2))) |> 
+  transform(kpl = mpg * 0.4251)
+```
+
+`tidyverse` functions are written with pipes in mind and are named as verbs with the goal to tell you exactly what they do:
 
 ```{r}
 library(tidyverse)
@@ -523,11 +539,11 @@ Note: You can interject the `View()` command at any line in a complicated pipeli
 - Implements the "Grammar of Graphics": a language for describing custom plots instead of relying on predefined plotting functions
 - The specific logic makes it harder to learn than other packages, but you can express essentially any plots in it (I highly recommend using ["ggplot2: Elegant Graphics for Data Analysis"](https://ggplot2-book.org/) to learn the package instead of individual tutorials)
 
-## Exercises
+## Exercises 3
 
 1. Run ggplot(data = mpg). What do you see and why?
 2. In the function `pb_collect()` from `paperboy`, what do the arguments `ignore_fails` and `connections` do?
-3. Write a function that takes a numeric vector of miles per gallon consumption data and transforms it to kilometer per liter. If anything other than a numeric vector is entered, the fcuntion should display an error (hint: see ?stop).
+3. Write a function that takes a numeric vector of miles per gallon consumption data and transforms it to kilometer per liter. If anything other than a numeric vector is entered, the function should display an error (hint: see ?stop).
 4. In the code below, check the sizes of the intermediate objects with `object.size()`.
 
 ```{r}
@@ -566,11 +582,23 @@ This is where *literate programming* has a lot of advantages:
 Quarto (and its predecessor R Markdown) were designed to make it easy for you to make the most of these advantages.
 We have already been using these tools throughout the workshop and I hope this made you more familiar with them.
 
-## Exercises
+## Exercises 4
 
 1. Use the function `report_template()` from my package [jbgtemplates](https://github.com/JBGruber/jbgtemplates) to start a new report
 
 2. Add some simple analysis in it and render
+
+3. Create a new quarto document and use the following yaml header to start your research abstract:
+
+```
+---
+title: "Your Research Title"
+subtitle: "Abstract Introduction to Web Scraping and Data Management for Social Scientists"
+author: Your Name
+date: today
+format: pdf
+---
+```
 
 # How to use R and Python together 
 ## Why combine Python with R? {#why-combine-python-with-r}
@@ -579,11 +607,11 @@ We have already been using these tools throughout the workshop and I hope this m
 
 Why not just switch to Python?
 
-1.  If you're here, you probably already know R so why re-learn things from scratch?
+1.  If you're here, you probably already know `R` so why re-learn things from scratch?
 2.  R is a programming language specifically for statistics with some great built-in functionality that you would miss in Python.
 3.  R has absolutely outstanding packages for data science with no drop-in replacement in Python (e.g., ggplot2, dplyr, tidytext).
 
-Why not just stick with R then?
+Why not just stick with `R` then?
 
 1.  Many computational tools are not nativly available in R (e.g., for browser emulation and machine learning) as advancements are made by software engeneers and companies who rely on Python
 2.  You might want to collaborate with someone who uses Python and need to run their code
@@ -611,7 +639,7 @@ if (R.Version()$os == "mingw32") {
 
 ### (If Nothing is Found) Install Python
 
-The easiest way to install Python for `R` projects is through `reticulate`:
+The easiest way to install Python for `R` projects is through `reticulate` (it also causes issues regulary though, so consider using your package manager):
 
 ```{r}
 #| eval: false
@@ -681,7 +709,7 @@ library(reticulate)
 py_config()
 ```
 
-### Installing Python Packages
+## Installing Python Packages
 
 `reticulate::py_install()` installs package similar to `install.packages()`. Let's install the packages we need:
 
@@ -705,31 +733,44 @@ But there are some caveats:
 reticulate::py_install("os")
 ```
 
-### Installing Python Packages
+## Installing Python Packages
 
-General tip: see if the software distributor has instructions, like the excellent ones from [`spacy`](https://spacy.io/usage):
+:::: {.columns}
 
-![](media/spacy-install.png){fig-align="center"}
-
+::: {.column width="60%"}
 If you see the `$` in the beginning, these are command line/bash commands. Use the ```` ```{bash} ```` chunk option to run these commands and use the pip and python versions in your virtual environment (you could also [activate the environment](https://docs.python.org/3/tutorial/venv.html) instead).
 
-```{bash}
+````
+```{{bash}}
 #| eval: false
 ./python-env/bin/pip install -U pip setuptools wheel
 ./python-env/bin/pip install -U 'spacy'
 ./python-env/bin/python -m spacy download en_core_web_sm
 ./python-env/bin/python -m spacy download de_core_news_sm
 ```
+````
 
 On Windows, the binary files are in a different location:
 
-```{bash}
+````
+```{{bash}}
 #| eval: false
 ./python-env/Scripts/pip.exe install -U pip setuptools wheel
 ./python-env/Scripts/pip.exe install -U 'spacy'
 ./python-env/Scripts/python.exe -m spacy download en_core_web_sm
 ./python-env/Scripts/python.exe -m spacy download de_core_news_sm
 ```
+````
+:::
+
+::: {.column width="40%" }
+General tip: see if the software distributor has instructions, like the excellent ones from [`spacy`](https://spacy.io/usage):
+
+![](media/spacy-install.png)
+:::
+
+::::
+
 
 ## Workflow
 ### Use in Quarto
@@ -844,7 +885,7 @@ reticulate::py_help(py$hello)
 ```
 
 
-## Exercises
+## Exercises 5
 
 1. Write a Python function that takes a numeric vector of miles per gallon consumption data and transforms it to kilometer per liter. Use the function from within R
 2. Use the function in Python, but using a vector defined in R

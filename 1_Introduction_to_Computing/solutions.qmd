@@ -1,0 +1,38 @@
+---
+title: "solutions day 1"
+format: html
+---
+
+## Exercises 2
+
+1. Fork the course repository on GitHub
+2. Clone the course repository to your computer
+3. In the folder "participants" copy the file "participants.csv" and name the copy "participatns_YOUR_NAME" 
+4. Fill in your details (if you feel uncomfortable sharing your details with the class and on the public GitHub site, just add "-" to some or all columns)
+4. Commit and push your changes
+5. Make a pull request to the main repo
+6. Optional: After I have merged your pull request, you can set your fork to private and add me and Marius as collaborators (you will submit your homework that way)
+
+## Exercises 3
+
+1. Run ggplot(data = mpg). What do you see and why?
+2. In the function `pb_collect()` from `paperboy`, what do the arguments `ignore_fails` and `connections` do?
+3. Write a function that takes a numeric vector of miles per gallon consumption data and transforms it to kilometer per liter. If anything other than a numeric vector is entered, the function should display an error (hint: see ?stop).
+4. In the code below, check the sizes of the intermediate objects with `object.size()`.
+
+```{r}
+file_link <- "https://raw.githubusercontent.com/shawn-y-sun/Customer_Analytics_Retail/main/purchase%20data.csv"
+df <- read.csv(file_link)
+filtered_df <- df[df$Age >= 50,]
+aggregated_df <- aggregate(filtered_df$Quantity, by = list(filtered_df$Day), FUN = sum)
+names(aggregated_df) <- c("day", "total_quantity")
+aggregated_df[order(aggregated_df$total_quantity, decreasing = TRUE)[1:5],]
+```
+
+5. How could the code above be improved if you only want the final result, the code should be readable and you care about memory usage?
+
+## Exercises 5
+
+1. Write a Python function that takes a numeric vector of miles per gallon consumption data and transforms it to kilometer per liter. Use the function from within R
+2. Use the function in Python, but using a vector defined in R
+
