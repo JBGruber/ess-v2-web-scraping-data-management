@@ -35,4 +35,3 @@ aggregated_df[order(aggregated_df$total_quantity, decreasing = TRUE)[1:5],]
 
 1. Write a Python function that takes a numeric vector of miles per gallon consumption data and transforms it to kilometer per liter. Use the function from within R
 2. Use the function in Python, but using a vector defined in R
-
