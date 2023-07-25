@@ -1,7 +1,6 @@
 ---
 title: "solutions"
 format: html
-editor: visual
 ---
 
 

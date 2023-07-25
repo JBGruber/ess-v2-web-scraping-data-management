@@ -1,0 +1,61 @@
+---
+title: "solutions"
+format: html
+---
+
+## Exercises 1
+
+1. Get the table with 2023 opinion polling for the next United Kingdom general election from <https://en.wikipedia.org/wiki/Opinion_polling_for_the_next_United_Kingdom_general_election>
+2. Wrangle and plot the data opinion polls
+
+## Exercises 2
+
+1. For extracting text, `rvest` has two functions: `html_text` and `html_text2`. Explain the difference. You can test your explanation with the example html below.
+
+```{r}
+html <- "<p>This is some text
+         some more text</p><p>A new paragraph!</p>
+         <p>Quick Question, is web scraping:
+
+         a) fun
+         b) tedious
+         c) I'm not sure yet!</p>" |> 
+  read_html()
+```
+
+2. How could you convert the `links` objects so that it contains actual URLs?
+3. How could you add the links we extracted above to the `pm_table` to keep everything together?
+
+## Let's scrape! Exercise
+
+I started the code below, now it's your turn to finish it:
+
+```{r}
+#| eval: false
+# 1. Request & collect raw html
+html <- read_html("https://www.ic2s2.org/program.html")
+
+sessions <- html |> 
+  html_elements(".nav_list")
+
+# 2. Parse
+talks <- sessions |> 
+  html_elements("li")
+
+talks_titles <- talks |> 
+  html_elements("") |> 
+  html_text()
+
+talks_speaker <- talks |> 
+  html_elements("") |> 
+  html_text()
+
+talks_authors <- talks |> 
+  html_elements("") |> 
+  html_text()
+``` 
+
+## Exercises 3
+
+1. Can you find older iterations of the ECPR conference? How would you scrape these programmes?
+
