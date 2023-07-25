@@ -16,8 +16,32 @@ format: html
 ## Exercises 3
 
 1. Run ggplot(data = mpg). What do you see and why?
+
+- an empty plot
+- ggplot creates the "canvas" of the plot with the right dimensions. But since we added no aestetics or layers, the canvas remains empty
+
 2. In the function `pb_collect()` from `paperboy`, what do the arguments `ignore_fails` and `connections` do?
+
+- to check this, use the command `?paperboy::pb_collect()`
+- `ignore_fails` ignores individual connections failing and moves on to the next URL to download data from
+- `connections` sets the number of connections opened at once
+
 3. Write a function that takes a numeric vector of miles per gallon consumption data and transforms it to kilometer per liter. If anything other than a numeric vector is entered, the function should display an error (hint: see ?stop).
+
+```{r}
+# reusing the formula from the section 'The pipe"
+mpg_converter <- function(mpg) {
+  if (!is.numeric(mpg)) {
+    stop("only numeric vectors allowed")
+  }
+  kpl = mpg * 0.4251
+  return(kpl)
+}
+mpg_converter(c(20, 25, 30))
+mpg_converter(c("twenty-five"))
+```
+
+
 4. In the code below, check the sizes of the intermediate objects with `object.size()`.
 
 ```{r}
@@ -29,10 +53,89 @@ names(aggregated_df) <- c("day", "total_quantity")
 aggregated_df[order(aggregated_df$total_quantity, decreasing = TRUE)[1:5],]
 ```
 
+```{r}
+object.size(df)
+object.size(filtered_df)
+object.size(aggregated_df)
+```
+
+
 5. How could the code above be improved if you only want the final result, the code should be readable and you care about memory usage?
+
+It could be improved by not saving intermediate objects, but using the pipe instead.
+I also convert it to tidyverse code, but that is optional:
+
+```{r}
+library(tidyverse)
+final_df <- file_link |> 
+  read.csv() |> 
+  filter(Age >= 50) |> 
+  group_by(Day) |> 
+  summarise(total_quantity = sum(Quantity)) |> 
+  arrange(-total_quantity)
+object.size(final_df)
+head(final_df)
+```
+
+Another alterantive would be to wrap this in a function, as intermediat object inside the function environment are destroyed and only the final object (which should be wrapped in `return()`) is added to the main environment/memory.
+
+```{r}
+top_quantity_days <- function(file_link) {
+  df <- read.csv(file_link)
+  filtered_df <- df[df$Age >= 50,]
+  aggregated_df <- aggregate(filtered_df$Quantity, by = list(filtered_df$Day), FUN = sum)
+  names(aggregated_df) <- c("day", "total_quantity")
+  aggregated_df[order(aggregated_df$total_quantity, decreasing = TRUE)[1:5],]
+}
+top_quantity_days("https://raw.githubusercontent.com/shawn-y-sun/Customer_Analytics_Retail/main/purchase%20data.csv")
+```
+
 
 ## Exercises 5
 
 1. Write a Python function that takes a numeric vector of miles per gallon consumption data and transforms it to kilometer per liter. Use the function from within R
+
+```{r}
+library(reticulate)
+```
+
+
+```{python}
+def mpg_converter(mpg):
+    kpl = mpg * 0.4251
+    return kpl
+```
+
+
+```{r}
+library(reticulate)
+py$mpg_converter(20)
+```
+
+Note: the function only takes a single numeric value. To make it take a longer vector is a little more advanced:
+
+```{python}
+def mpg_converter(mpg_list):
+    kpl_list = []
+    for mpg in mpg_list:
+        kpl = mpg * 0.4251
+        kpl_list.append(kpl)
+    return kpl_list
+```
+
+```{r}
+py$mpg_converter(c(20, 25, 30))
+```
+
 2. Use the function in Python, but using a vector defined in R
+
+```{r}
+mpg <- c(20, 25, 30)
+```
+
+
+```{python}
+mpg_converter(r.mpg)
+```
+
 
