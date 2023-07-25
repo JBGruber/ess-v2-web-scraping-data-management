@@ -1,0 +1,61 @@
+---
+title: "solutions"
+format: html
+---
+
+
+## Exercises 2
+
+1. Add another image and another paragraph to `data/example.html` and display it in your browser
+2. Add a second level headline to the page
+3. Add another image to the page
+4. Manipulate the files `data/example.html` and/or `data/example.css` so that "content" is displayed in italics
+5. Practice finding the right selector with the CSS Diner game (<https://flukeout.github.io/>)
+6. Consider the toy HTML example below. Which selectors do you need to put into `html_elements()` (which extracts all elements matching the selector) to extract the information
+
+
+```{r}
+#| eval: false
+library(rvest)
+webpage <- "<html>
+<body>
+  <h1>Computational Research in the Post-API Age</h1>
+  <div class='author'>Deen Freelon</div>
+  <div>Keywords:
+    <ul>
+      <li>API</li>
+      <li>computational</li>
+      <li>Facebook</li>
+    </ul>
+  </div>
+  <div class='text'>
+    <p>Three pieces of advice on whether and how to scrape from Dan Freelon</p>
+  </div>
+  
+  <ol class='advice'>
+    <li id='one'> use authorized methods whenever possible </li>
+    <li id='two'> do not confuse terms of service compliance with data protection </li>
+    <li id='three'> understand the risks of violating terms of service </li>
+  </ol>
+
+</body>
+</html>" |> 
+  read_html()
+```
+
+```{html}
+# the headline
+headline <- html_elements(webpage, "")
+# the author
+author <- html_elements(webpage, "")
+# the ordered list
+ordered_list <- html_elements(webpage, "")
+# all bullet points
+bullet_points <- html_elements(webpage, "")
+# bullet points in unordered list
+bullet_points_unordered <- html_elements(webpage, "")
+# bullet points in ordered list
+bullet_points_ordered <- html_elements(webpage, "")
+# third bullet point in ordered list
+bullet_point_three_ordered <- html_elements(webpage, "")
+```

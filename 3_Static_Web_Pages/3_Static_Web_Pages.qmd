@@ -9,9 +9,12 @@ format:
     scrollable: true
     code-line-numbers: true
     slide-number: c/t
+    logo: https://essexsummerschool.com/wp-content/uploads/2016/03/essex_logo-mobile.svg
+    self-contained: true
 execute:
   cache: true
   echo: true
+highlight-style: pygments
 bibliography: ../references.bib
 ---
 
@@ -107,39 +110,10 @@ ggplot(happy_table, aes(x = `GDP per capita`, y = `Healthy life expectancy`)) +
 :::
 ::::
 
-## Exercises
+## Exercises 1
 
 1. Get the table with 2023 opinion polling for the next United Kingdom general election from <https://en.wikipedia.org/wiki/Opinion_polling_for_the_next_United_Kingdom_general_election>
-
-```{r}
-# 1. Request & collect raw html
-html <- read_html("https://en.wikipedia.org/wiki/Opinion_polling_for_the_next_United_Kingdom_general_election")
-
-# 2. Parse
-opinion_table <- html |>
-  html_elements(".wikitable") |> 
-  html_table() |>                
-  pluck(1)                       
-```
-
 2. Wrangle and plot the data opinion polls
-
-```{r}
-# 3. Wrangle
-opinion_tidy <- opinion_table |> 
-  pivot_longer(Con:Others, names_to = "party", values_to = "result") |> 
-  filter(!str_detect(result, fixed(".mw-parser-output"))) |> 
-  mutate(result_pct = as.integer(str_extract(result, "\\d+(?=%)")),
-         date_clean = str_extract(Datesconducted, "\\d{1,2} [A-z]{3}"),
-         date = lubridate::dmy(paste(date_clean, 2023))) |> 
-  filter(!is.na(result_pct), 
-         date < "2023-07-20")
-
-# Plot!
-opinion_tidy |> 
-  ggplot(aes(x = date, y = result_pct, colour = party)) +
-  geom_line()
-```
 
 # Example: UK prime ministers on Wikipedia
 ## Use your Browser to Scout
@@ -202,7 +176,7 @@ Note: these are relative links that need to be combined with *https://en.wikiped
 ::::
 
 
-## Exercises
+## Exercises 2
 
 1. For extracting text, `rvest` has two functions: `html_text` and `html_text2`. Explain the difference. You can test your explanation with the example html below.
 
@@ -297,7 +271,13 @@ talks_speaker <- talks |>
 talks_authors <- talks |> 
   html_elements("i") |> 
   html_text()
+
+head(talks_titles)
+head(talks_speaker)
+head(talks_authors)
 ```
+
+We can now tray to wrangle the data into a suitable format:
 
 ```{r}
 #| error: true
@@ -318,6 +298,9 @@ length(talks_authors)
 :::: {.columns}
 
 ::: {.column width="45%"}
+If several elements are children of a element that represents our "case"/data row, we can loop over the identified parent elements.
+For this, let's write a function that parses one talk:
+
 ```{r}
 talks <- sessions |> 
   html_elements("li")
@@ -341,9 +324,11 @@ parse_talks(talks[[1]])
 ```
 :::
 
-::: {.column width="50%" }
+::: {.column width="50%" .fragment}
+
+Now we can use the function to loop over all talks:
+
 ```{r}
-#| class: fragment
 talks_data <- map(talks, parse_talks) |> 
   bind_rows() |> 
   separate(col = title, into = c("time", "title"), sep = " - ")
@@ -492,13 +477,13 @@ Note: In newer versions of `R` `read_html` seems to have a bug that causes probl
 Let's give it a try:
 
 ```{r}
-# error: true
+#| error: true
 fromJSON(json_string)
 ```
 
 The problem is that this is not just the json itself, but also some Javascript to sort and render it:
 
-```{css}
+```{r}
 substr(json_string, 1, 250)
 ```
 
@@ -508,10 +493,10 @@ If you have a little experience with json, you can spot here that the actual dat
 data.ArrayStore({\"data\"
 (right here) ---^
 ```
-## ~Parsing~ Cleaning the json string
+## <s>Parsing</s> Cleaning the json string
 
 ```{r}
-# error: true
+#| error: true
 json_clean <- json_string |>
   str_remove_all(fixed("DevExpress.utils.readyCallbacks.add((function($){$(\"#AcademicProgramme_ScheduleGrid\").dxDataGrid({\"dataSource\":{\"store\":new DevExpress.data.ArrayStore("))
 fromJSON(json_clean)
@@ -528,7 +513,7 @@ str_replace_all('"StartDate":new Date(2023, 8, 4)', "new Date\\((\\d+), (\\d+), 
 Perfect, let's try this again:
 
 ```{r}
-# error: true
+#| error: true
 json_clean <- json_string |>
   str_remove_all(fixed("DevExpress.utils.readyCallbacks.add((function($){$(\"#AcademicProgramme_ScheduleGrid\").dxDataGrid({\"dataSource\":{\"store\":new DevExpress.data.ArrayStore(")) |> 
   str_replace_all("new Date\\((\\d+), (\\d+), (\\d+)\\)", "\"\\1-\\2-\\3\"")
@@ -538,7 +523,7 @@ fromJSON(json_clean)
 Blimey! More garbage :(
 :::
 
-## ~Parsing~ Cleaning the json string: Second attempt
+## <s>Parsing</s> Cleaning the json string: Second attempt
 
 It seems there is more problems at the end of the json string.
 So let's have a look:
@@ -555,12 +540,12 @@ Let's try to remove the trailing Javascript bits.
 Perfect, let's try this again:
 
 ```{r}
-# error: true
+#| error: true
 json_clean <- json_string |>
   str_remove_all(fixed("DevExpress.utils.readyCallbacks.add((function($){$(\"#AcademicProgramme_ScheduleGrid\").dxDataGrid({\"dataSource\":{\"store\":new DevExpress.data.ArrayStore(")) |> 
     str_remove_all(fixed(")},\"showBorders\":true,\"showColumnLines\":false,\"showRowLines\":true,\"paging\":{\"pageSize\":20},\"columnHidingEnabled\":true,\"columnAutoWidth\":true,\"wordWrapEnabled\":true,\"searchPanel\":{\"visible\":true,\"searchVisibleColumnsOnly\":true},\"columns\":[{\"dataField\":\"StartDate\",\"cssClass\":\"align-top\",\"visible\":false},{\"dataField\":\"EndDate\",\"cssClass\":\"align-top\",\"visible\":false},{\"dataField\":\"Activity\",\"cssClass\":\"align-top\",\"encodeHtml\":false,\"allowHiding\":false},{\"dataField\":\"Papers\",\"cssClass\":\"align-top\",\"encodeHtml\":false,\"allowHiding\":true,\"hidingPriority\":1},{\"dataField\":\"People\",\"cssClass\":\"align-top\",\"encodeHtml\":false,\"allowHiding\":true,\"hidingPriority\":0},{\"name\":\"ItineraryButton\",\"cssClass\":\"align-top\",\"caption\":\" \",\"encodeHtml\":false,\"allowHiding\":true,\"hidingPriority\":2,\"calculateCellValue\":function(data) { return scheduleGrid.formatItineraryButton(data); },\"alignment\":\"center\"}]});}).bind(this, jQuery));")) |>
   str_replace_all("new Date\\((\\d+), (\\d+), (\\d+)\\)", "\"\\1-\\2-\\3\"")
-ecpr_data <- fromJSON(json_clean)
+json_parsed <- fromJSON(json_clean)
 ```
 
 Smashing! `R` converted the data succesfully!
@@ -571,7 +556,7 @@ Smashing! `R` converted the data succesfully!
 Let's have a look at the data now:
 
 ```{r}
-glimpse(ecpr_data)
+glimpse(json_parsed)
 ```
 
 ::: {.incremental}
@@ -585,7 +570,7 @@ glimpse(ecpr_data)
 As a first step, we pull the data out and save it in a new object:
 
 ```{r}
-ecpr_data_df <- ecpr_data$data
+ecpr_data_df <- json_parsed$data
 ecpr_data_df$Papers[2]
 ```
 
@@ -604,7 +589,9 @@ check_in_browser <- function(html) {
 check_in_browser(ecpr_data_df$Papers[2])
 ```
 
-![](media/ecpr-look-in-browser.png){.fragment}
+:::{.fragment}
+![](media/ecpr-look-in-browser.png)
+:::
 
 ## Wrangling the data: Getting some data
 
@@ -661,7 +648,7 @@ extract_papers(ecpr_data_df$Papers[2])
 
 ```{r}
 #| error: true
-ecpr_data <- json_parsed |>
+ecpr_data <- ecpr_data_df |>
   filter(Papers != "") |> # remove empty lines
   mutate(papers = map(Papers, extract_papers)) # loop over all sessions
 ```
@@ -672,7 +659,7 @@ Another error :( let's investigate!
 
 ```{r}
 #| class: fragment
-html <- json_parsed |>
+html <- ecpr_data_df |>
   filter(Papers != "") |> 
   slice(2) |> 
   pull(Papers) |> 
@@ -698,7 +685,7 @@ author_urls
 Makes sense that some papers have several authors, so let's take another look at the HTML here:
 
 ```{r}
-json_parsed |>
+ecpr_data_df |>
   filter(Papers != "") |> 
   slice(2) |> 
   pull(Papers) |> 
@@ -783,23 +770,23 @@ extract_papers <- function(html) {
 
 ```{r}
 #| class: fragment
-json_parsed |>
+ecpr_data_df |>
   filter(Papers != "") |> 
   slice(2) |> 
   pull(Papers) |> 
   extract_papers() |> 
-  unnest(c(authors, author_urls))
+  unnest(c(authors, author_urls)) # unnest puts each paper into its own row, duplicating ids where necessary
 ```
 
 ## Wrangling the data: final steps
 
 ```{r}
-ecpr_data <- json_parsed |>
+ecpr_data <- ecpr_data_df |>
   filter(Papers != "") |> 
   mutate(papers = map(Papers, extract_papers))
 ecpr_data |>
   select(panel_id = ID, event_id = EventID, papers) |> 
-  unnest(papers)
+  unnest(papers) 
 ```
 
 
@@ -820,14 +807,188 @@ saveRDS(ecpr_data_tidy, "../data/ecpr_2023_data.rds")
 ```
 
 
-## Exercises
+## Exercises 3
 
-1. Can you find older iterations of the ECPR conference? Hoe would you scrape these programmes?
+1. Can you find older iterations of the ECPR conference? How would you scrape these programmes?
+
+# Example: 2023 CompText (a special case)
+## What do we want
+
+:::: {.columns}
+
+::: {.column width="45%"}
+- General goal in the course: we want to build a database of conference attendance and link this to researchers
+- So for each website:
+  - Speakers
+  - (Co-)authors
+  - Paper/talk titles
+  - Panel (to see who was in the same ones)
+- In the next session we will also collect some researcher data
+:::
+
+::: {.column width="50%" .fragment}
+However:
+
+- Comptext did not have an online programme
+- Instead, the programme is distributed via this PDF: <https://www.comptextconference.org/wp-content/uploads/2023/05/COMPTEXT-2023-programme-May-9-2023.pdf>
+:::
+
+::::
+
+## Scraping data from PDFs?
+
+:::: {.columns}
+
+::: {.column width="45%"}
+- Data inside a PDF is actually not such an uncommon case
+- Many institutions share PDFs with tables, images and lists of data
+- We can use some of our new pattern finding skills to scrape data from these PDFs as well though
+  - Session names seem to be in a larger font and bold
+  - Paper titles are in italics
+  - Authors are either bold or plain font
+:::
+
+::: {.column width="50%"}
+![](media/pdf.png)
+:::
+
+::::
+
+## Let's investigate the PDF a little
+
+```{r}
+library(pdftools)
+comptext <- pdf_data("https://www.comptextconference.org/wp-content/uploads/2023/05/COMPTEXT-2023-programme-May-9-2023.pdf", font_info = TRUE)
+comptext[[7]]
+```
+
+We see here that:
+
+- each page is an element in a list
+- each word is in one row of the table
+- it contains the font_size and font_name
+- the position of each word on tha page is given with x and y coordinates
+
+
+:::{.fragment}
+Let's investigate a few words we saw above:
+
+```{r}
+# a panel name
+comptext[[7]] |> 
+  filter(str_detect(text, "Intra-Party"))
+
+# a paper title
+comptext[[7]] |> 
+  filter(str_detect(text, "Politicization"))
+
+# a speaker name
+comptext[[7]] |> 
+  filter(str_detect(text, "Alberto"))
+
+# a co-author name
+comptext[[7]] |> 
+  filter(str_detect(text, "Agnieszka"))
+
+# a word in the right column
+comptext[[7]] |> 
+  filter(str_detect(text, "Yael"))
+
+# a word on the right edge of the left column
+comptext[[7]] |> 
+  filter(str_detect(text, "Innova-"))
+```
+
+It looks like we can distinguish some types of information by the font_name and the info at which y and x position a word appears.
+:::
+
+## Combining the columns
+
+As a first step, we want the text in the left column to appear before the text in the right column.
+We can use the x position for this.
+
+```{r}
+tidy_page <- function(page) {
+  left_column <- page |> 
+    filter(x < 300) |> 
+    group_by(y) |> 
+    summarise(text = paste(text, collapse = " "),
+              font_name = list(unique(font_name)))
+  
+  right_column <- page |> 
+    filter(x > 300) |> 
+    group_by(y) |> 
+    summarise(text = paste(text, collapse = " "),
+              font_name = list(unique(font_name)))
+  
+  bind_rows(left_column, right_column)
+    
+}
+```
+
+## Finding and using patterns
+
+```{r}
+comptext_data <- comptext[7:14] |> 
+  # bring the text in the correct order on each page
+  map(tidy_page) |> 
+  bind_rows() |> 
+  # paper titles use a specific font, which make them easy to identify
+  mutate(paper_title = font_name == "VQHLVV+SFTI1000") |> 
+  # lines with more than one font (bold and non-bold) are meta information, let's note that
+  mutate(font_name = map_chr(font_name, function(x) ifelse(length(x) > 1, "meta", x))) |> 
+  # Panels start with the string panel and a large bold font
+  mutate(panel_start = font_name == "ZGRRLU+SFBX1000" & str_detect(text, "Panel")) |> 
+  # using cumsum, we count the TRUE values. One appears at the start of each panel
+  mutate(panel = cumsum(panel_start)) |> 
+  # we are not interested in the information before the first panel
+  filter(panel > 0) |> 
+  group_by(panel) |> 
+  # we can count the first appearance of a paper title to give the paper a unique id per panel
+  mutate(paper_nr = cumsum(paper_title & !lag(paper_title))) |> 
+  # now we can group the data using this id to make sure the authors are matched to the right paper
+  group_by(panel, paper_nr) |> 
+  # summarised takes several elements and uses a function to return exactly one
+  summarise(
+    # we select all text where the paper_nr == 0, which is te panel title
+    panel_title = paste(text[paper_nr == 0], collapse = " "),
+    # now we combine the text in the rows that have a paper title
+    paper_title = paste(text[paper_title], collapse = " "),
+    # finally, we put the authors in a list. They are the text within a panel descript that uses one of two fonts
+    author = list(text[font_name %in% c("ZXOBMV+SFRM1000", "ZGRRLU+SFBX1000")]),
+    .groups = "drop"
+  ) |> 
+  # we replace empty rows with NAs so we can fill them with the preeeding text
+  mutate(across(panel_title:paper_title, function(x) ifelse(x == "", NA_character_, x))) |> 
+  fill(panel_title) |> 
+  filter(paper_nr > 0) |> 
+  unnest(author)
+comptext_data
+```
+
+```{r}
+#| echo: false
+saveRDS(comptext_data, "../data/comptext_2023_data.rds")
+```
+
+# Homework
+
+You have seen some tools and tricks to scrape websites now.
+But your best ally in web scraping is **experience**!
+Until tomorrow noon, your task is to find some conference you could imagine attending and scrape their website to get the same information we extracted today.
+Even if you don't fully succeed, document the steps you take and note down where the information can be found.
+If you collect raw html in R and the data is not where it should be (e.g., the html elements containing panel names do not exist), you might have discovered a more advanced site. 
+Note that down and try another conference.
+
+Deadline: Thursday noon
+
 
 # Wrap Up
 
 Save some information about the session for reproducibility.
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Show Session Info"
 sessionInfo()
 ```
