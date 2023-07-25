@@ -39,12 +39,23 @@ You should have several software applications installed before the start of the 
 - [RStudio Desktop](https://posit.co/download/rstudio-desktop/) or [VSCodium](https://vscodium.com/) or [VSCodium](https://code.visualstudio.com/download)
 - [Quarto](https://quarto.org/docs/get-started/)
 
+The course uses the base pipe character (`|>`) which is only available in `R` version 4.1.0+.
+If you still use an older version of `R`, we recommend that you update it.
+Since the newer version is not compatible with old installations of `R`, you will have to install all your old packages again.
+You can use a small function for this, which guides you through retrieving your old packages, from this [Github gist](https://gist.github.com/JBGruber/28c79af6d5f9015370feef31da2cb1da):
+
+``` r
+source("https://gist.githubusercontent.com/JBGruber/28c79af6d5f9015370feef31da2cb1da/raw/8165f560fc53647e3456ba661fc65d0244ac437c/get_old_packages.R")
+get_old_packages()
+```
+
 After cloning this repository to your computer, you can install all required R packages with the code below. But you can do this after the first day (when we discuss how you work with GitHub):
 
 ``` r
 if (!requireNamespace("rlang", quietly = TRUE)) install.packages("rlang", dependencies = TRUE)
 rlang::check_installed("attachment")
-if (rlang::is_installed("playwrightr")) remotes::install_github("benjaminguinaudeau/playwrightr")
+if (!rlang::is_installed("playwrightr")) remotes::install_github("benjaminguinaudeau/playwrightr")
+if (!rlang::is_installed("paperboy")) remotes::install_github("JBGruber/paperboy")
 rlang::check_installed(attachment::att_from_qmds(path = ".", recursive = TRUE))
 ```
 
@@ -68,7 +79,7 @@ Your task: Find a conference that uses a static website and scrape the data as w
 
 ## Day 4 Application Programming Interface (APIs)
 
-In this session, we learn how to get obtain data from someone else.
+In this session, we learn how to obtain data from someone else.
 
 Your task: Find and parse information about the authors you found on the conference website youscraped before
 
