@@ -1,0 +1,11 @@
+---
+title: "Ideological position as a predictor for coalition loyalty in multiparty presidential systems"
+subtitle: "Abstract Introduction to Web Scraping and Data Management for Social Scientists"
+author: Koichi Osamura
+date: today
+format: pdf
+---
+
+## Abstract
+
+Scholarship on coalitions has devoted decades of analysis on the structure of this type of government, roaming from the negotiation process toward the formation of a new coalition, to the causes of its dissolution. Nevertheless, parliamentary systems are still the main object of study, and presidential regimes are often neglected. In this paper, I investigate the particularities of coalition maintenance in ten South American countries by focusing on what may cause disloyalty among coalition members. I argue that office perks are not the only factors influencing lawmakers' behavior, but their ideological stance impact their loyalty to presidents. I also claim that loyalty depends upon the topic a bill covers; a more sensitive agenda brings lawmakers to be more prone to not follow the president. To test these assumptions, I run multilevel regressions to examine roll call votes in the examined countries between 1992 and 2022. Based on webscraping techniques, I create an original data set of speeches given by coalition MPs in the parliament of the examined countries, and conduct speech analyses based on the wordshoal model to obtain their ideological position. In addition, I classify bills by agenda and verify the existence of correlation between agenda salience and disloyalty. This paper contributes to the scholarship not only on presidential systems or South and Latin America, but also coalition governments in general by providing an expanded overview on ideological position and the extent to which presidents have control over their coalition members.
