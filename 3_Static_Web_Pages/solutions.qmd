@@ -6,7 +6,36 @@ format: html
 ## Exercises 1
 
 1. Get the table with 2023 opinion polling for the next United Kingdom general election from <https://en.wikipedia.org/wiki/Opinion_polling_for_the_next_United_Kingdom_general_election>
+
+```{r}
+# 1. Request & collect raw html
+html <- read_html("https://en.wikipedia.org/wiki/Opinion_polling_for_the_next_United_Kingdom_general_election")
+
+# 2. Parse
+opinion_table <- html |>
+  html_elements(".wikitable") |> 
+  html_table() |>                
+  pluck(1)                       
+```
+
 2. Wrangle and plot the data opinion polls
+
+```{r}
+# 3. Wrangle
+opinion_tidy <- opinion_table |> 
+  pivot_longer(Con:Others, names_to = "party", values_to = "result") |> 
+  filter(!str_detect(result, fixed(".mw-parser-output"))) |> 
+  mutate(result_pct = as.integer(str_extract(result, "\\d+(?=%)")),
+         date_clean = str_extract(Datesconducted, "\\d{1,2} [A-z]{3}"),
+         date = lubridate::dmy(paste(date_clean, 2023))) |> 
+  filter(!is.na(result_pct), 
+         date < "2023-07-20")
+
+# Plot!
+opinion_tidy |> 
+  ggplot(aes(x = date, y = result_pct, colour = party)) +
+  geom_line()
+```
 
 ## Exercises 2
 
@@ -57,5 +86,18 @@ talks_authors <- talks |>
 
 ## Exercises 3
 
+1. Run the function we used in `map2` in the last chunk on only one title and session nodeset to better understand what the function is doing
+
+2. Say we wanted to also get the Plenary sessions and posters. How could we adapt the code from the last slide?
+
+## Exercises 4
+
 1. Can you find older iterations of the ECPR conference? How would you scrape these programmes?
+
+## Exercises 5
+
+1. In the folder /data (relative to this document) there is a PDF with some text. Read it into R
+2. The PDF has two columns, bring the text in the right order as a human would read it
+3. Let's assume you wanted to have this text in a table with one column indicating the section and one having the text of the section
+4. Now let's assume you wanted to parse this on the paragraph level instead
 

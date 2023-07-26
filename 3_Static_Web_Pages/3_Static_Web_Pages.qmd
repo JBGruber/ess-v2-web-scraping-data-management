@@ -146,6 +146,7 @@ pm_table
 ::: {.column width="50%" }
 
 ```{html}
+#| eval: false
 <td rowspan="4">
   <span class="anchor" id="18th_century"></span>
    <b>
@@ -277,7 +278,7 @@ head(talks_speaker)
 head(talks_authors)
 ```
 
-We can now tray to wrangle the data into a suitable format:
+We can now try to wrangle the data into a suitable format:
 
 ```{r}
 #| error: true
@@ -341,10 +342,12 @@ talks_data
 
 ## But What about Sessions?
 
+We can start from a slighly different venture point to get clean selection of all session elements:
+
 ```{r}
 titles <- html |> 
   html_elements(".wrapper.style2") |> 
-  html_elements(":not(header)>h2")
+  html_elements(":not(header)>h2") # all h2 which are note directly below a
 length(titles)
 
 sessions <- html |> 
@@ -352,6 +355,8 @@ sessions <- html |>
   html_elements("ul")
 length(sessions)
 ```
+
+They have the same length, which means we can process them alongside each other:
 
 ```{r}
 #| class: fragment
@@ -376,9 +381,15 @@ talks_data
 ```
 
 ```{r}
-# echo: false
+#| echo: false
 saveRDS(talks_data, "../data/ic2s2_2023_data.rds")
 ```
+
+## Exercises 3
+
+1. Run the function we used in `map2` in the last chunk on only one title and session nodeset to better understand what the function is doing
+
+2. Say we wanted to also get the Plenary sessions and posters. How could we adapt the code from the last slide?
 
 
 # Example: 2023 ECPR General Conference
@@ -410,8 +421,9 @@ saveRDS(talks_data, "../data/ic2s2_2023_data.rds")
 
 ::: {.column width="45%" .incremental}
 - Interestingly, we can sort and filter the data
-- This is an indicator that the site *very* likely uses a JavaScript function 
-- That gets the data from somewhere
+- This is an indicator that the site *very* likely uses a JavaScript function...
+- ... that gets the data from somewhere!
+- In fact, when we download the html content, it is quite large
 
 ```{r}
 #| class: fragment
@@ -807,7 +819,7 @@ saveRDS(ecpr_data_tidy, "../data/ecpr_2023_data.rds")
 ```
 
 
-## Exercises 3
+## Exercises 4
 
 1. Can you find older iterations of the ECPR conference? How would you scrape these programmes?
 
@@ -972,7 +984,7 @@ saveRDS(comptext_data, "../data/comptext_2023_data.rds")
 ```
 
 
-## Exercises 4
+## Exercises 5
 
 1. In the folder /data (relative to this document) there is a PDF with some text. Read it into R
 2. The PDF has two columns, bring the text in the right order as a human would read it
