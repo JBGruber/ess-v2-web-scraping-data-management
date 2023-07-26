@@ -538,7 +538,6 @@ There are quite a lot of [CSS selectors](https://www.w3schools.com/cssref/css_se
 | id            | `#table-1`        | **unique** element with `id="table-1"`                 |
 | element.class | `tr.headerRow`    | **all** `<tr>` elements with the `someTable` class     |
 | element.class | `tr.headerRow`    | **all** `<tr>` elements with the `someTable` class     |
-
 | class1.class2 | `.someTable.blue` | **all** elements with the `someTable` AND `blue` class |
 | class1 > tag  | `.table-1 > tr`   | **all** elements with `tr` with `.table-1` as parent   |
 | class1 + tag  | `.top-row + tr`   | **first** elements with `tr` following `.top-row`      |
