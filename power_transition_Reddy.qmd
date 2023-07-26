@@ -1,0 +1,31 @@
+---
+title: "Determinants of irregular power transitions"
+author: Zhu Qi
+format: pdf
+editor: visual
+date: today
+---
+
+## Abstract
+
+This project examines irregular power transitions in the world since 1945.
+Irregular power transitions are those that do not follow the established rules of succession, such as coups, overstays, and revolutions.
+The goal of this project is to identify the determinants of irregular power transitions, with a focus on the role of regime type, government type, term limits, and the degree of democracy.
+
+To accomplish this goal, I will collect data on a variety of factors, including:
+
+-   Regime type (democracy, autocracy, monarchy, etc.)
+
+-   Government type (presidentialism, parliamentarism, etc.)
+
+-   Term limits and term length
+
+-   Power transition type (regular or irregular)
+
+-   Leader characteristics (age, gender, years in power, etc.)
+
+-   Degree of democracy (Polity V index)
+
+-   Economic indicators (GDP, GDP per capita, unemployment rate, etc.)
+
+-   Corruption index
