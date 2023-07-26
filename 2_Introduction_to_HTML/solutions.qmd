@@ -3,7 +3,6 @@ title: "solutions"
 format: html
 ---
 
-
 ## Exercises 2
 
 1. Add another image and another paragraph to `data/example.html` and display it in your browser
@@ -15,7 +14,6 @@ format: html
 
 
 ```{r}
-#| eval: false
 library(rvest)
 webpage <- "<html>
 <body>

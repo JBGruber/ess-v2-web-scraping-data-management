@@ -52,6 +52,10 @@ We will:
 - Download data from a website
 - Retrieve data via an API
 - Scrape the (unstructured) Data
+
+:::{.fragment}
+![](media/web-mining.png)
+:::
 :::
 
 ::: {.column width="50%"}
@@ -60,11 +64,13 @@ We will:
 :::
 ::::
 
+
+
 ## Web Scraping
 
 ::: {.incremental}
 - A technique to extract specific data from a web page
-  - Get the author, title, date and body of an only news article
+  - Get the author, title, date and body of an online news article
   - A table from a website (like Wikipedia)
 - This can include hyperlinks which you can systematically go through
 - You can write a "robot" that systematically extracts data and saves it in a format convenient for analysis
@@ -453,11 +459,11 @@ You can select HTML elements by their tags
 library(rvest)
 read_html("data/example.html") |> 
   html_elements("p") |> 
-  html_text()
+  html_text2()
 ```
 
 - to select them, **tags** are written without the `<>`
-- in theory, arbitrary tags are possible, but commonly people use `<p>` (paragraph), `<br>` (line break), `<h1>`, `<h2>`, `<h3>`, ... (first, second, third, ... level headline), `<b>` (bold), `<i>` (italic), `<img>` (image), `<href>` (hyperlink), and a couple more.
+- in theory, arbitrary tags are possible, but commonly people use `<p>` (paragraph), `<br>` (line break), `<h1>`, `<h2>`, `<h3>`, ... (first, second, third, ... level headline), `<b>` (bold), `<i>` (italic), `<img>` (image), `<a>` (hyperlink), and a couple more.
 
 ## Using attributes
 
@@ -531,6 +537,8 @@ There are quite a lot of [CSS selectors](https://www.w3schools.com/cssref/css_se
 | class         | `.someTable`      | **all** elements with `class="someTable"`              |
 | id            | `#table-1`        | **unique** element with `id="table-1"`                 |
 | element.class | `tr.headerRow`    | **all** `<tr>` elements with the `someTable` class     |
+| element.class | `tr.headerRow`    | **all** `<tr>` elements with the `someTable` class     |
+
 | class1.class2 | `.someTable.blue` | **all** elements with the `someTable` AND `blue` class |
 | class1 > tag  | `.table-1 > tr`   | **all** elements with `tr` with `.table-1` as parent   |
 | class1 + tag  | `.top-row + tr`   | **first** elements with `tr` following `.top-row`      |
@@ -575,21 +583,29 @@ webpage <- "<html>
   read_html()
 ```
 
-```{html}
+```{r}
+#| eval: false
 # the headline
 headline <- html_elements(webpage, "")
+headline
 # the author
 author <- html_elements(webpage, "")
+author
 # the ordered list
 ordered_list <- html_elements(webpage, "")
+ordered_list
 # all bullet points
 bullet_points <- html_elements(webpage, "")
+bullet_points
 # bullet points in unordered list
 bullet_points_unordered <- html_elements(webpage, "")
-# bullet points in ordered list
+bullet_points_unordered
+# elements in ordered list
 bullet_points_ordered <- html_elements(webpage, "")
+bullet_points_ordered
 # third bullet point in ordered list
 bullet_point_three_ordered <- html_elements(webpage, "")
+bullet_point_three_ordered
 ```
 
 

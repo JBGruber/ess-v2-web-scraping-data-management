@@ -971,6 +971,16 @@ comptext_data
 saveRDS(comptext_data, "../data/comptext_2023_data.rds")
 ```
 
+
+## Exercises 4
+
+1. In the folder /data (relative to this document) there is a PDF with some text. Read it into R
+2. The PDF has two columns, bring the text in the right order as a human would read it
+3. Let's assume you wanted to have this text in a table with one column indicating the section and one having the text of the section
+4. Now let's assume you wanted to parse this on the paragraph level instead
+
+
+
 # Homework
 
 You have seen some tools and tricks to scrape websites now.
