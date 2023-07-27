@@ -1,0 +1,18 @@
+---
+title: "Home work of Reddy in Jul 27"
+format: pdf
+editor: visual
+---
+
+# Task
+- To build a database of conference attendance and link this to researchers for European Political Science Association 13th Annual Conference (EPSA 2023): https://virtual.oxfordabstracts.com/#/event/3738/program
+  - Code
+  - Categories
+  - Topic
+  - Chairs
+  - Discussants
+  - Paper title
+  - Speakers & affiliatlion
+  - (Co-)authors
+
+Problem: Each session is linked to a subpage which is difficult for me to scrape.
