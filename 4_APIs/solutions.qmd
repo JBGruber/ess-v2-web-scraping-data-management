@@ -13,9 +13,9 @@ format: html
 
 2. You might want to add more information to the data.frame. Adapt the function parse_response to also extract: apiUrl, lastModifiedDate, pillarId
 
-3. Make your own request to the API with a different search term
+3. Request page 2 from the API
 
-4. Request page 2 from the API
+4. Make your own request to the API with a different search term
 
 5. Wrap the request and parsing function in a loop to go through the pages, use `req_throttle` to make not more than 1 request per second
 

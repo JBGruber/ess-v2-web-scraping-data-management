@@ -50,10 +50,30 @@ html <- "<p>This is some text
          b) tedious
          c) I'm not sure yet!</p>" |> 
   read_html()
+html |> 
+  html_text2()
 ```
 
+
+
 2. How could you convert the `links` objects so that it contains actual URLs?
+
+```{r}
+paste0("https://en.wikipedia.org", links)
+glue::glue("https://en.wikipedia.org{links}")
+```
+
 3. How could you add the links we extracted above to the `pm_table` to keep everything together?
+
+```{r}
+pm_links <- tibble(name = title, link = links)
+pm_table |> 
+  mutate(pm = str_extract(`Prime ministerOffice(Lifespan)`, ".+\\["),
+         pm = str_remove(pm, "\\[")) |> 
+  select(pm) |> 
+  left_join(pm_links, by = c("pm"= "name"))
+```
+
 
 ## Let's scrape! Exercise
 
@@ -88,16 +108,178 @@ talks_authors <- talks |>
 
 1. Run the function we used in `map2` in the last chunk on only one title and session nodeset to better understand what the function is doing
 
+```{r}
+x <- titles[[1]]
+y <- sessions[[1]]
+test <- function(x, y) {
+  chair <- x |> 
+    html_element("i") |> 
+    html_text()
+    
+  session_title <- x |> 
+    html_text() |> 
+    str_remove(chair)
+  
+  y |> 
+    html_elements("li") |> 
+    map(parse_talks) |> 
+    bind_rows() |> 
+    mutate(session = session_title, chair = chair, .before = 1)
+  
+}
+```
+
+
+
 2. Say we wanted to also get the Plenary sessions and posters. How could we adapt the code from the last slide?
+
+```{r}
+posters <- html |> 
+  html_elements(".wrapper.style3:contains(posters)") |> 
+  html_elements("ul")
+
+poster_title <- posters |> 
+  html_elements("b") |> 
+  html_text2()
+
+poster_authors <- posters |> 
+  html_elements("i") |> 
+  html_text2()
+
+posters_df <- tibble(poster_title, poster_authors)
+
+
+plenary <- html |> 
+  html_elements(".wrapper.style3:not(posters)") |> 
+  html_elements("ul")
+
+plenary_title <- plenary |> 
+  html_elements("b") |> 
+  html_text2()
+
+plenary_authors <- plenary |> 
+  html_elements("i") |> 
+  html_text2()
+
+plenary_df <- tibble(poster_title, poster_authors)
+```
+
 
 ## Exercises 4
 
 1. Can you find older iterations of the ECPR conference? How would you scrape these programmes?
 
+
+After googling it, I found that the ID of the 2022 conference is 185 (https://ecpr.eu/Events/AcademicProgramme/Schedule?eventID=185)
+
+
+```{r}
+html <- readLines("https://ecpr.eu/Events/AcademicProgramme/Schedule?eventID=185", encoding = "windows-1252") |>
+  paste(collapse = "\n") |>
+  read_html()
+
+json_string <- html |>
+  html_element("#scheduleGrid_Container script") |>
+  html_text()
+
+json_clean <- json_string |>
+  str_remove_all(fixed("DevExpress.utils.readyCallbacks.add((function($){$(\"#AcademicProgramme_ScheduleGrid\").dxDataGrid({\"dataSource\":{\"store\":new DevExpress.data.ArrayStore(")) |> 
+    str_remove_all(fixed(")},\"showBorders\":true,\"showColumnLines\":false,\"showRowLines\":true,\"paging\":{\"pageSize\":20},\"columnHidingEnabled\":true,\"columnAutoWidth\":true,\"wordWrapEnabled\":true,\"searchPanel\":{\"visible\":true,\"searchVisibleColumnsOnly\":true},\"columns\":[{\"dataField\":\"StartDate\",\"cssClass\":\"align-top\",\"visible\":false},{\"dataField\":\"EndDate\",\"cssClass\":\"align-top\",\"visible\":false},{\"dataField\":\"Activity\",\"cssClass\":\"align-top\",\"encodeHtml\":false,\"allowHiding\":false},{\"dataField\":\"Papers\",\"cssClass\":\"align-top\",\"encodeHtml\":false,\"allowHiding\":true,\"hidingPriority\":1},{\"dataField\":\"People\",\"cssClass\":\"align-top\",\"encodeHtml\":false,\"allowHiding\":true,\"hidingPriority\":0},{\"name\":\"ItineraryButton\",\"cssClass\":\"align-top\",\"caption\":\" \",\"encodeHtml\":false,\"allowHiding\":true,\"hidingPriority\":2,\"calculateCellValue\":function(data) { return scheduleGrid.formatItineraryButton(data); },\"alignment\":\"center\"}]});}).bind(this, jQuery));")) |>
+  str_replace_all("new Date\\((\\d+), (\\d+), (\\d+)\\)", "\"\\1-\\2-\\3\"")
+
+json_parsed <- fromJSON(json_clean)
+ecpr_data_2022_df <- json_parsed$data
+
+ecpr_data_2022 <- ecpr_data_2022_df |>
+  filter(Papers != "") |> 
+  mutate(papers = map(Papers, extract_papers))
+
+ecpr_data_tidy_2022 <- ecpr_data_2022 |>
+  select(panel_id = ID, event_id = EventID, papers) |>
+  unnest(papers) |>
+  unnest(c(authors, author_urls)) |>
+  distinct(paper_title, authors, .keep_all = TRUE)
+
+ecpr_data_tidy_2022 |>
+  count(authors, sort = TRUE)
+```
+
+
 ## Exercises 5
 
 1. In the folder /data (relative to this document) there is a PDF with some text. Read it into R
+
+```{r}
+library(pdftools)
+scrp_dat <- pdf_data("data/example.pdf", font_info = TRUE)
+```
+
 2. The PDF has two columns, bring the text in the right order as a human would read it
+
+```{r}
+tidy_page <- function(page) {
+  left_column <- page |> 
+    filter(x < 300) |> 
+    group_by(y) |> 
+    summarise(text = paste(text, collapse = " "),
+              font_name = unique(font_name),
+              font_size = unique(font_size))
+  
+  right_column <- page |> 
+    filter(x > 300) |> 
+    group_by(y) |> 
+    summarise(text = paste(text, collapse = " "),
+              font_name = unique(font_name),
+              font_size = unique(font_size))
+  
+  bind_rows(left_column, right_column)
+    
+}
+scrp_dat_ordered <- scrp_dat |> 
+  map(tidy_page) |> 
+  bind_rows()
+```
+
+
 3. Let's assume you wanted to have this text in a table with one column indicating the section and one having the text of the section
+
+```{r}
+scrp_dat_ordered |> 
+  mutate(
+    section_title = font_size == 20,
+    section_text = font_size == 11,
+    section = cumsum(section_title)
+  ) |> 
+  group_by(section, section_title) |> 
+  summarise(
+    section_title = paste(text[section_title], collapse = " "),
+    text = paste(text, collapse = " "),
+  ) |> 
+  mutate(section_title = ifelse(section_title == "", NA_character_, section_title)) |> 
+  fill(section_title, .direction = "up") |> 
+  filter(section_title != text)
+```
+
 4. Now let's assume you wanted to parse this on the paragraph level instead
+
+```{r}
+scrp_dat_ordered |> 
+  mutate(
+    section_title = font_size == 20,
+    section_text = font_size == 11,
+    section = cumsum(section_title),
+    par_start = y == lag(y) + 24
+  ) |> 
+  group_by(section) |> 
+  mutate(paragraph = cumsum(ifelse(is.na(par_start), FALSE, par_start))) |> 
+  group_by(section, section_title, paragraph) |> 
+  summarise(
+    section_title = paste(text[section_title], collapse = " "),
+    text = paste(text, collapse = " "),
+  ) |> 
+  mutate(section_title = ifelse(section_title == "", NA_character_, section_title)) |> 
+  ungroup() |> 
+  fill(section_title, .direction = "up") |> 
+  filter(section_title != text)
+```
 
