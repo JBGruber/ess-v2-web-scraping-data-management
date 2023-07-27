@@ -510,7 +510,7 @@ data.ArrayStore({\"data\"
 ```{r}
 #| error: true
 json_clean <- json_string |>
-  str_remove_all(fixed("DevExpress.utils.readyCallbacks.add((function($){$(\"#AcademicProgramme_ScheduleGrid\").dxDataGrid({\"dataSource\":{\"store\":new DevExpress.data.ArrayStore("))
+  str_remove(fixed("DevExpress.utils.readyCallbacks.add((function($){$(\"#AcademicProgramme_ScheduleGrid\").dxDataGrid({\"dataSource\":{\"store\":new DevExpress.data.ArrayStore("))
 fromJSON(json_clean)
 ```
 
