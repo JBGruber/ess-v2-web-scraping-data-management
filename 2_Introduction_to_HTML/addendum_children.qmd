@@ -3,7 +3,7 @@ title: "Addendum: HTML Children"
 format: html
 ---
 
-Question: What is the difference between chaining html selectors with `>` vs (white space).
+Question: What is the difference between chaining html selectors with `>` vs ` ` (white space).
 
 Answer: `>` selects only direct children, (white space) selects descendants (elements that are children, grand children, great grand children and so on).
 

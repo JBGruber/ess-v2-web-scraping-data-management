@@ -1,0 +1,30 @@
+---
+title: "solutions day 1"
+format: html
+---
+
+## Exercises 1
+
+1. Open the ICA site in your browser and inspect the network traffic. Can you identify the call to the programme json?
+
+2. I excluded panel 613 since the function fails on that. Investigate what the problem is
+
+## Exercises 2
+
+1. Use your own cookies and session ID to run the function on the page with the URLs
+
+2. Check the German news website https://www.zeit.de/. It has an interesting quirk that prevents you from scraping the content of the site. What is it and how could you get around it?
+
+## Exercises 3
+
+1. Write a loop to go through the links we have collected
+
+2. How could you write a function that keeps collecting links and then looks at the posts?
+
+3. What else do you need to build a full scraper?
+
+## Exercises 4
+
+1. Did we get all categories now? See if it changes when you request, for example, a different Member Type
+
+2. What would be the strategy to now get all csv files?

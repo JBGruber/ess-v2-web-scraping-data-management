@@ -235,7 +235,8 @@ Luckily, we know how to extract text from that :)
 
 ```{r}
 library(rvest)
-text <- read_html(pluck(res, "blocks", "body", 1, "bodyHtml")) |> html_text2()
+text <- read_html(pluck(res, "blocks", "body", 1, "bodyHtml")) |>
+  html_text2()
 text
 ```
 
@@ -453,7 +454,8 @@ search_members("Blair")
 ```
 
 ```{r}
-search_members("Smith")
+search_members("Smith") |> 
+  filter(str_detect(nameListAs, "[ ,^]Smith[ ,$]"))
 ```
 
 The Smith search is a little odd since there are surely more than 20 results for this common name.
@@ -475,7 +477,7 @@ search_members <- function(name) {
     req_method("GET") |>
     req_url_query(
       Name = name,
-        take = 20
+      take = 20
     ) |> 
     req_headers(
       accept = "text/plain",
@@ -701,6 +703,7 @@ You can easily add roxygen code to a function using the Code menu in RStudio and
 #'
 #' @return
 #' @export
+#' 
 #'
 #' @examples
 search_members <- function(name = NULL,
@@ -818,7 +821,8 @@ However, the information seems a bit sparse... But we'll look at that later.
 First we wrap this in a function and add pagination to get all results:
 
 ```{r}
-find_scholar <- function(name) {
+find_scholar <- function(name,
+                         verbose = TRUE) {
   # make initial request
   res <- request("https://api.semanticscholar.org/graph/v1/author/search") |>
     req_url_query(query = name) |> 
@@ -828,7 +832,9 @@ find_scholar <- function(name) {
   # note total
   total <- pluck(res, "total")
   # display user message
-  message("Found ", total, " authors")
+  if (verbose) {
+    message("Found ", total, " authors")
+  }
   # note offset
   nxt <- pluck(res, "next")
   # wrangle initial data
@@ -878,7 +884,7 @@ We are only interested in some of the fields, so let's build a new request and s
 ```{r}
 resp <- request("https://api.semanticscholar.org/graph/v1/author/search") %>%
   req_url_query(query = "Adam Smith") %>%
-  req_url_query(fields = "name,papers.title,papers.title,papers.year,papers.fieldsOfStudy,papers.authors",
+  req_url_query(fields = "name,papers.title,papers.year,papers.fieldsOfStudy,papers.authors",
                 limit = 10) |> 
   req_headers(accept = "application/json") |> 
   req_perform() |> 
@@ -975,7 +981,7 @@ I separated the parsing function from this to make it easier to read.
 
 ```{r}
 parse_response <- function(resp) {
-  adam_search <- pluck(resp, "data") |>
+  pluck(resp, "data") |>
     # bind initial data into a tibble
     bind_rows() |>
     # unnest papers list into columns

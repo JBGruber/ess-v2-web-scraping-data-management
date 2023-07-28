@@ -1,0 +1,849 @@
+---
+title: "Introduction to Web Scraping and Data Management for Social Scientists"
+subtitle: "Session 1: Scraping Interactive Web Pages"
+author: "Johannes B. Gruber"
+date: 2023-07-28
+format:
+  revealjs:
+    smaller: true
+    scrollable: true
+    code-line-numbers: true
+    slide-number: c/t
+    logo: https://essexsummerschool.com/wp-content/uploads/2016/03/essex_logo-mobile.svg
+    self-contained: true
+execute:
+  cache: true
+  echo: true
+highlight-style: pygments
+bibliography: ../references.bib
+---
+
+# Introduction
+
+## The Plan for Today
+
+:::: {.columns}
+
+::: {.column width="60%"}
+In this session, we learn how to hunt down **wild** data.
+We will:
+
+- Learn how to find secret APIs
+- Emulate a Browser
+- We focus specifically on step 1 below
+  
+![Original Image Source: prowebscraper.com](../2_Introduction_to_HTML/media/web_scraping_steps.png)
+:::
+
+::: {.column width="40%" }
+![](https://images.unsplash.com/photo-1564166174574-a9666f590437?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=774&q=80)
+[Philipp Pilz](https://unsplash.com/@buchstabenhausen) via unsplash.com
+:::
+
+::::
+
+
+# Request & Collect Raw Data: a closer look
+## Common Problems
+
+Initially we were planning to scrape researchgate.net, since it contains self-created profiles of many researchers.
+However, when you try to get the html content:
+
+```{r}
+#| error: true
+library(rvest)
+read_html("https://www.researchgate.net/profile/Johannes-Gruber-2")
+```
+
+If you don't know what an HTTP error means, you can go to https://http.cat and have the status explained in a fun way.
+Below I use a little convenience function:
+
+```{r}
+error_cat <- function(error) {
+  link <- paste0("https://http.cat/images/", error, ".jpg")
+  knitr::include_graphics(link)
+}
+error_cat(403)
+```
+
+## So what's going on?
+
+- If something like this happens, the server essentially did not fullfill our request
+- This is because the website seems to have some special requirements for serving the (correct) content. These could be:
+  - specific user agents
+  - other specific headers
+  - login through a browser cookie
+- To find out how the browser manages to get the correct response, we can use the Network tab in the inspection tool
+
+
+## Strategy 1: Emulate what the Browser is Doing
+
+Open the Inspect Window Again:
+
+![](media/inspect.png)
+
+But this time, we focus on the *Network* tab:
+
+![](media/copy-curl.png)
+
+Here we get an overview of all the network activity of the browser and the individual requests for data that are performed.
+Clear the network log first and reload the page to see what is going on.
+Finding the right call is not always easy, but in most cases, we want:
+
+- a call with status 200 (OK/successful)
+- a document type 
+- something that is at least a few kB in size
+- *Initiator* is usually "other" (we initiated the call by refreshing)
+
+When you identified the call, you can right click -> copy -> copy as cURL
+
+## `cURL` Calls
+
+:::: {.columns}
+
+::: {.column width="50%"}
+What is `cURL`:
+
+- `cURL` is a library that can make HTTP requests.
+- it is widely used for API calls from the terminal.
+- it lists the parameters of a call in a pretty readable manner:
+  - the unnamed argument in the beginning is the Uniform Resource Locator (URL) the request goes to
+  - `-H` arguments describe the headers, which are arguments sent with the call
+  - `-d` is the data or body of a request, which is used e.g., for uploading things
+  - `-o`/`-O` can be used to write the response to a file (otherwise the response is returned to the screen)
+  - `--compressed` means to ask for a compressed response which is unpacked locally (saves bandwith)
+:::
+
+::: {.column width="50%" }
+```{bash}
+#| style: "font-size: 110%;"
+#| eval: false
+curl 'https://www.researchgate.net/profile/Johannes-Gruber-2' \
+  -H 'authority: www.researchgate.net' \
+  -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7' \
+  -H 'accept-language: en-GB,en;q=0.9' \
+  -H 'cache-control: max-age=0' \
+  -H '[Redacted]' \
+  -H 'sec-ch-ua: "Chromium";v="115", "Not/A)Brand";v="99"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "Linux"' \
+  -H 'sec-fetch-dest: document' \
+  -H 'sec-fetch-mode: navigate' \
+  -H 'sec-fetch-site: cross-site' \
+  -H 'sec-fetch-user: ?1' \
+  -H 'upgrade-insecure-requests: 1' \
+  -H 'user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36' \
+  --compressed
+```
+:::
+
+::::
+
+
+## `httr2::curl_translate()` 
+
+- We have seen `httr2::curl_translate()` in action yesterday
+- It can also convert more complicated API calls that make look `R` no diffrent from a regular browser
+- (Remember: you need to escape all `"` in the call, press `ctrl` + `F` to open the Find & Replace tool and put `"` in the find `\"` in the replace field and go through all matches except the first and last):
+
+```{r}
+library(httr2)
+httr2::curl_translate(
+"curl 'https://www.researchgate.net/profile/Johannes-Gruber-2' \
+  -H 'authority: www.researchgate.net' \
+  -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7' \
+  -H 'accept-language: en-GB,en;q=0.9' \
+  -H 'cache-control: max-age=0' \
+  -H 'cookie: [Redacted]' \
+  -H 'sec-ch-ua: \"Chromium\";v=\"115\", \"Not/A)Brand\";v=\"99\"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: \"Linux\"' \
+  -H 'sec-fetch-dest: document' \
+  -H 'sec-fetch-mode: navigate' \
+  -H 'sec-fetch-site: cross-site' \
+  -H 'sec-fetch-user: ?1' \
+  -H 'upgrade-insecure-requests: 1' \
+  -H 'user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36' \
+  --compressed"
+)
+```
+
+## 'Emulating' the Browser Request
+
+```{r}
+#| eval: false
+request("https://www.researchgate.net/profile/Johannes-Gruber-2") |>
+  req_headers(
+    authority = "www.researchgate.net",
+    accept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    `accept-language` = "en-GB,en;q=0.9",
+    `cache-control` = "max-age=0",
+    cookie = "[Redacted]",
+    `sec-ch-ua` = "\"Chromium\";v=115\", \"Not/A)Brand\";v=\"99",
+    `sec-ch-ua-mobile` = "?0",
+    `sec-ch-ua-platform` = "\"Linux\"",
+    `sec-fetch-dest` = "document",
+    `sec-fetch-mode` = "navigate",
+    `sec-fetch-site` = "cross-site",
+    `sec-fetch-user` = "?1",
+    `upgrade-insecure-requests` = "1",
+    `user-agent` = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+  ) |>
+  req_perform()
+```
+
+![](media/200.png)
+
+:::{.fragment}
+This used to work quite well when I prepared the slides, but suddenly stopped working over the weekend. 
+So I removed the rest of the slides about it...
+
+![](https://i.kym-cdn.com/entries/icons/original/000/030/359/cover4.jpg)
+:::
+
+# Example: ICA (International Communication Association) 2023 Conference
+## What do we want
+
+:::: {.columns}
+
+::: {.column width="45%"}
+- General goal in the course: we want to build a database of conference attendance and link this to researchers
+- So for each website:
+  - Speakers
+  - (Co-)authors
+  - Paper/talk titles
+  - Panel (to see who was in the same ones)
+:::
+
+::: {.column width="50%" }
+[
+  ![](media/ica.png)
+](https://www.icahdq.org/mpage/ICA23-Program)
+:::
+
+::::
+
+## Trying to scrape the programme
+
+- The page looks straightforward enough!
+- There is a "Conference Schedule" with links to the individual panels
+- The table has a pretty nice class by which we can select it: `class="agenda-content"`
+
+```{r}
+#| error: true
+#| class: fragment
+html <- read_html("https://www.icahdq.org/mpage/ICA23-Program")
+```
+
+:::{.fragment}
+![](https://media.tenor.com/zlai3JBCvVsAAAAM/mindblown-jonstewart.gif)
+:::
+
+## Let's Check our Network Tab
+
+![](media/ica-json.png)
+
+:::{.incremental}
+- I noticed a request that takes quite long and retrieves a relatively large object (500kB)
+- Clicking on it opens another window showing the response
+- Wait, is this a json with the entire conference schedule?
+:::
+
+## Translating the `cURL` call
+
+```{r}
+curl_translate("curl 'https://whova.com/xems/apis/event_webpage/agenda/public/get_agendas/?event_id=JcQAdK91J0qLUtNxOYUVWFMTUuQgIg3Xj6VIeeyXVR4%3D' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: en-GB,en-US;q=0.9,en;q=0.8' \
+  -H 'Cache-Control: no-cache' \
+  -H 'Connection: keep-alive' \
+  -H 'Pragma: no-cache' \
+  -H 'Referer: https://whova.com/embedded/event/JcQAdK91J0qLUtNxOYUVWFMTUuQgIg3Xj6VIeeyXVR4%3D/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-origin' \
+  -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: \"Chromium\";v=\"115\", \"Not/A)Brand\";v=\"99\"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: \"Linux\"' \
+  --compressed")
+```
+
+## Requesting the json (?)
+
+```{r}
+ica_data <- request("https://whova.com/xems/apis/event_webpage/agenda/public/get_agendas/?event_id=JcQAdK91J0qLUtNxOYUVWFMTUuQgIg3Xj6VIeeyXVR4%3D") |> 
+  req_headers(
+    Accept = "application/json, text/plain, */*",
+    `Accept-Language` = "en-GB,en-US;q=0.9,en;q=0.8",
+    `Cache-Control` = "no-cache",
+    Connection = "keep-alive",
+    Pragma = "no-cache",
+    Referer = "https://whova.com/embedded/event/JcQAdK91J0qLUtNxOYUVWFMTUuQgIg3Xj6VIeeyXVR4%3D/",
+    `Sec-Fetch-Dest` = "empty",
+    `Sec-Fetch-Mode` = "cors",
+    `Sec-Fetch-Site` = "same-origin",
+    `User-Agent` = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+    `sec-ch-ua` = "\"Chromium\";v=115\", \"Not/A)Brand\";v=\"99",
+    `sec-ch-ua-mobile` = "?0",
+    `sec-ch-ua-platform` = "\"Linux\"",
+  ) |> 
+  req_perform() |> 
+  resp_body_json()
+```
+
+:::{.fragment}
+```{r}
+object.size(ica_data) |> 
+  format("MB")
+```
+
+
+It worked!
+
+![](https://media2.giphy.com/media/Q8IYWnnogTYM5T6Yo0/giphy.gif?cid=ecf05e47a37ontzij6ljf2ztej9d9bytu5qlvgxt8xm74ywq&ep=v1_gifs_search&rid=giphy.gif&ct=g)
+:::
+
+## Wrangling with Json
+
+:::: {.columns}
+
+::: {.column width="60%"}
+- This json file or the R object it produces is quite intimidating.
+- To get to a certain panel on the fourth day, for example, we have to enter this insane path:
+
+```{r}
+ica_data[["data"]][["agenda"]][[4]][["time_ranges"]][[3]][[2]][[65]][[1]][["sessions"]][[1]]
+```
+
+- Essentially, someone pressed a relational database into a list format and we now have to scramble to cope with this monstrosity
+:::
+
+::: {.column width="40%" }
+![](https://upload.wikimedia.org/wikipedia/en/thumb/f/f7/Jason_Voorhees_%28Ken_Kirzinger%29.jpg/250px-Jason_Voorhees_%28Ken_Kirzinger%29.jpg)
+:::
+
+::::
+
+
+## Parsing the Json
+
+I could not come up with a better method so far.
+The only way to extract the data is with a nested `for` loop going through all days and all entries in the object and looking for elements called "sessions".
+
+```{r}
+library(tidyverse, warn.conflicts = FALSE)
+sessions <- list()
+
+for (day in 1:5) {
+  
+  times <- ica_data[["data"]][["agenda"]][[day]][["time_ranges"]]
+  
+  for (l_one in seq_along(pluck(times))) {
+    for (l_two in seq_along(pluck(times, l_one))) {
+      for (l_three in seq_along(pluck(times, l_one, l_two))) {
+        for (l_four in seq_along(pluck(times, l_one, l_two, l_three))) {
+          
+          session <- pluck(times, l_one, l_two, l_three, l_four, "sessions", 1)
+          id <- pluck(session, "id")
+          if (!is.null(id)) {
+            id <- as.character(id)
+            sessions[[id]] <- session
+          }
+          
+        }
+      }
+    }
+  }
+}
+```
+
+## Parsing the Json data
+
+```{r}
+ica_data_df <- tibble(
+  panel_id = map_int(sessions, "id"),
+  panel_name = map_chr(sessions, "name"),
+  time = map_chr(sessions, "calendar_stime"),
+  desc = map_chr(sessions, function(s) pluck(s, "desc", .default = NA))
+)
+ica_data_df
+```
+
+## Extracting paper title and authors
+
+Finally we want to parse the HTML in the description column.
+
+```{r}
+ica_data_df$desc[100]
+```
+
+We can inspect one of the descriptions using the same function as in session 3:
+
+```{r}
+#| eval: false
+check_in_browser <- function(html) {
+  tmp <- tempfile(fileext = ".html")
+  writeLines(as.character(html), tmp)
+  browseURL(tmp)
+}
+check_in_browser(ica_data_df$desc[100])
+```
+
+![](media/ica_panel.png)
+
+## Extracting paper title and authors using a function
+
+I wrote another function for this.
+You can check some of the panels using the browser: `check_in_browser(ica_data_df$desc[100])`.
+
+```{r}
+pull_papers <- function(desc) {
+  # we extract the html code starting with the papers line
+  papers <- str_extract(desc, "<b>Papers: </b>.+$") |> 
+    str_remove("<b>Papers: </b><br />") |> 
+    # we split the html by double line breaks, since it is not properly formatted as paragraphs
+    strsplit("<br /><br />", fixed = TRUE) |> 
+    pluck(1)
+  
+  
+  # if there is no html code left, just return NAs
+  if (all(is.na(papers))) {
+    return(list(list(paper_title = NA, authors = NA)))
+  } else {
+    # otherwise we loop through each paper
+    map(papers, function(t) {
+      html <- read_html(t)
+      
+      # first line is the title
+      title <- html |> 
+        html_text2() |> 
+        str_extract("^.+\n")
+      
+      # at least authors are formatted italice
+      authors <- html_elements(html, "i") |> 
+        html_text2()
+      
+      list(paper_title = title, authors = authors)
+    })
+  }
+}
+```
+
+Now we have all the information we wanted:
+
+```{r}
+ica_data_df_tidy <- ica_data_df |> 
+  slice(-613) |> 
+  mutate(papers = map(desc, pull_papers)) |> 
+  unnest(papers) |> 
+  unnest_wider(papers) |> 
+  unnest(authors) |> 
+  select(-desc) |> 
+  filter(!is.na(authors))
+ica_data_df_tidy
+```
+
+
+```{r}
+#| echo: false
+saveRDS(ica_data_df_tidy, "../data/ica_2023.rds")
+```
+
+## Exercises 1
+
+1. Open the ICA site in your browser and inspect the network traffic. Can you identify the call to the programme json?
+
+2. I excluded panel 613 since the function fails on that. Investigate what the problem is
+
+# Example: 2023 APSA Annual Meeting & Exhibition
+## What do we want
+
+- General goal in the course: we want to build a database of conference attendance and link this to researchers
+- So for each website:
+  - Speakers
+  - (Co-)authors
+  - Paper/talk titles
+  - Panel (to see who was in the same ones)
+
+[
+  ![](https://convention2.allacademic.com/one/apsa/apsa23/images/conference_image.png)
+](https://convention2.allacademic.com/one/apsa/apsa23/index.php)
+
+## Let's explore the site a little together
+
+1. Find an overview of sessions
+2. Find details about each session
+3. Find details about each talk
+
+## First: Let's try to get the links for each panel/session
+
+![](media/apsa-sessions.png)
+
+This doesn't look too bad! The link even shows a selected_session_id, which could be handy:
+
+```
+https://convention2.allacademic.com/one/apsa/apsa23/index.php?cmd=Online+Program+View+Session&**selected_session_id=2069362**&PHPSESSID=9s7asg63fpouugut6m5m2vj36r
+```
+
+## Scraping the session links
+
+```{r}
+library(rvest)
+html <- read_html("https://convention2.allacademic.com/one/apsa/apsa23/index.php?cmd=Online+Program+View+Selected+Day+Submissions&selected_day=2023-09-01&program_focus=browse_by_day_submissions")
+
+panels <- html |> 
+  html_elements("li a") |> 
+  html_element("p") |> 
+  html_text2()
+
+panel_links <- html |> 
+  html_elements("li a") |> 
+  html_attr("href")
+tibble(panels, panel_links)
+```
+
+These do not look like the panel links!
+What's going on?!
+
+## Inspect the retrieved HTML
+
+The object `html` is not that easy to evaluate since it contains html code not made for human eyes and the output is truncated while printing.
+
+We can adapt the function we used before to convert the `rvest` object to a character object and display the content of the object in a browser:
+
+```{r}
+check_in_browser <- function(html) {
+  tmp <- tempfile(fileext = ".html")
+  writeLines(as.character(html), tmp)
+  browseURL(tmp)
+}
+```
+
+```{r}
+#| eval: false
+check_in_browser(html)
+```
+
+## So what's going on?
+
+- If something like this happens, the server essentially did not fulfill our request
+- Instead of giving us an error (like the 403 we saw before) it simply delivers us something and reports: OK
+- This is because the website seems to have some special requirements for serving the correct content. These could be
+  - specific user agents
+  - other specific headers
+  - login through a browser cookie
+- To find out how the browser manages to get the correct response (with all the links), we can use the Network tab in the inspection tool again
+
+## Recording the network traffic
+
+![](media/apsa-net-traffic.png)
+
+## The APSA site essentially uses a hidden API
+
+Following the same strategy as before:
+
+1. Copy the network call that gets our content from the browser
+2. pasting it into `httr2::curl_translate()` (make sure to escape mischievous ")
+
+```{r}
+httr2::curl_translate("curl 'https://convention2.allacademic.com/one/apsa/apsa23/index.php?cmd=Online+Program+View+Selected+Day+Submissions&selected_day=2023-08-31&program_focus=browse_by_day_submissions&PHPSESSID=fvjf6ltd4o45kgpv2occcrr0al' \
+  -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7' \
+  -H 'Accept-Language: en-GB,en-US;q=0.9,en;q=0.8' \
+  -H 'Cache-Control: no-cache' \
+  -H 'Connection: keep-alive' \
+  -H 'Cookie: 9s7asg63fpouugut6m5m2vj36r[msg]=e52640799a6bbcebac16c0205ffc2cd9; fvjf6ltd4o45kgpv2occcrr0al[msg]=999aa7691451c5d15ddf91ee0a902f3b; _ga=GA1.2.2046361133.1690277724; _gid=GA1.2.499473362.1690277724; monster[/one/apsa/apsa23/][fvjf6ltd4o45kgpv2occcrr0al][created]=1690532022; _gat=1; _gat_extraTracker=1; _ga_79KQXM4T08=GS1.2.1690530570.6.1.1690532023.0.0.0; _ga_JWPT5JHJ1E=GS1.2.1690530570.6.1.1690532024.0.0.0' \
+  -H 'Pragma: no-cache' \
+  -H 'Referer: https://convention2.allacademic.com/one/apsa/apsa23/index.php?cmd=Online+Program+Load+Focus&program_focus=browse_by_day_submissions&PHPSESSID=fvjf6ltd4o45kgpv2occcrr0al' \
+  -H 'Sec-Fetch-Dest: document' \
+  -H 'Sec-Fetch-Mode: navigate' \
+  -H 'Sec-Fetch-Site: same-origin' \
+  -H 'Sec-Fetch-User: ?1' \
+  -H 'Upgrade-Insecure-Requests: 1' \
+  -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: \"Chromium\";v=\"115\", \"Not/A)Brand\";v=\"99\"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: \"Linux\"' \
+  --compressed")
+```
+
+3. Running the resulting `httr2` and check if we get the right content
+
+```{r}
+html <- request("https://convention2.allacademic.com/one/apsa/apsa23/index.php?cmd=Online+Program+View+Selected+Day+Submissions&selected_day=2023-08-31&program_focus=browse_by_day_submissions&PHPSESSID=fvjf6ltd4o45kgpv2occcrr0al")  |>  
+  req_headers(
+    Cookie = "Cookie: 9s7asg63fpouugut6m5m2vj36r[msg]=e52640799a6bbcebac16c0205ffc2cd9; fvjf6ltd4o45kgpv2occcrr0al[msg]=999aa7691451c5d15ddf91ee0a902f3b; _ga=GA1.2.2046361133.1690277724; _gid=GA1.2.499473362.1690277724; monster[/one/apsa/apsa23/][fvjf6ltd4o45kgpv2occcrr0al][created]=1690532022; _gat=1; _gat_extraTracker=1; _ga_79KQXM4T08=GS1.2.1690530570.6.1.1690532023.0.0.0; _ga_JWPT5JHJ1E=GS1.2.1690530570.6.1.1690532024.0.0.0",
+    Referer = "https://convention2.allacademic.com/one/apsa/apsa23/index.php?cmd=Online+Program+Load+Focus&program_focus=browse_by_day_submissions&PHPSESSID=fvjf6ltd4o45kgpv2occcrr0al",
+  ) |> 
+  req_perform() |>
+  # we add this part to extract the html from the response
+  resp_body_html()
+```
+
+```{r}
+panels <- html |> 
+  html_elements("li a") |> 
+  html_text2()
+
+panel_links <- html |> 
+  html_elements("li a") |> 
+  html_attr("href")
+
+panels <- tibble(panels, panel_links) |> 
+  filter(str_detect(panel_links, "selected_session_id="))
+```
+
+4. Adapting the `httr2` call to make it usable to request other data
+
+## Wrapping the secret APSA API
+
+After some investigation, I noticed that the API returns the right information when it has two things in the call:
+
+- A valid Session ID (`PHPSESSID` query parameter)
+- A valid referrer header with the same Session ID
+- A Cookie string which matches the Session ID
+
+```{r}
+request_apsa <- function(url,
+                       sess_id = NULL,
+                       cookies = "9s7asg63fpouugut6m5m2vj36r[msg]=e52640799a6bbcebac16c0205ffc2cd9; fvjf6ltd4o45kgpv2occcrr0al[msg]=999aa7691451c5d15ddf91ee0a902f3b; _ga=GA1.2.2046361133.1690277724; _gid=GA1.2.499473362.1690277724; monster[/one/apsa/apsa23/][fvjf6ltd4o45kgpv2occcrr0al][created]=1690532022; _gat=1; _gat_extraTracker=1; _ga_79KQXM4T08=GS1.2.1690530570.6.1.1690532023.0.0.0; _ga_JWPT5JHJ1E=GS1.2.1690530570.6.1.1690532024.0.0.0") {
+  
+  # extract the session id from the URL if not given
+  sess_id <- str_extract(url, "&PHPSESSID=[a-z0-9]+(&|$)")
+  referer <- paste0(
+    "https://convention2.allacademic.com/one/apsa/apsa23/index.php?cmd=Online+Program+Load+Focus&program_focus=browse_by_day_submissions", 
+    sess_id
+  )
+  
+  request(url) |> 
+    req_headers(
+      Referer = referer,
+      Cookie = cookies
+    ) |> 
+    # Let's set a cautious rate in case they check for scraping
+    req_throttle(6 / 60) |> 
+    req_perform() |> 
+    resp_body_html()
+}
+```
+
+## Testing the function
+
+Let's test this on a panel:
+
+```{r}
+panel_3_html <- request_apsa(panels$panel_links[3])
+```
+
+
+```{r}
+#| eval: false
+check_in_browser(panel_3_html)
+```
+
+![](media/apsa-panel.png)
+
+## Write some code to parse the panel
+
+Luckily, the HTML is quite clean and easy to parse with the tools we've learned already:
+
+```{r}
+panel_title <- panel_3_html |> 
+  html_element("h3") |> 
+  html_text2()
+
+panel_description <- panel_3_html |> 
+  html_element("blockquote") |> 
+  html_text2()
+
+paper_urls <- panel_3_html |> 
+  html_elements("li a") |> 
+  html_attr("href")
+
+paper_description <- panel_3_html |> 
+  html_elements("li a") |> 
+  html_text2()
+
+tibble(paper_description, paper_urls) |> 
+  # we collected some trash, but can filter it out easily using the URL
+  filter(str_detect(paper_urls, "selected_paper_id=")) |> 
+  # We separate paper title and authors from each other
+  separate(paper_description, into = c("paper", "authors"), sep = " - ") |> 
+  # If there are several authors they are divided by ; (we split them up)
+  mutate(author = strsplit(authors, split = "; ")) |>
+  # pull the list out into a long format
+  unnest(author) |> 
+  # And add some infoormation from above
+  mutate(panel_title = panel_title,
+         paper_description = panel_description)
+```
+
+## Let's wrap this in a function
+
+We combine the request for a panel's html and the parsing in one function:
+
+```{r}
+scrape_panel <- function(url) {
+  sess_id <- str_extract(url, "(?<=selected_session_id=)\\d+")
+  message("Requesting session ", sess_id)
+  # request the URL with out request function
+  html <- request_apsa(url)
+  
+  
+  # Running the parser
+  title <- html |> 
+    html_element("h3") |> 
+    html_text2()
+  
+  description <- html |> 
+    html_element("blockquote") |> 
+    html_text2()
+  
+  paper_urls <- html |> 
+    html_elements("li a") |> 
+    html_attr("href")
+  
+  paper_description <- html |> 
+    html_elements("li a") |> 
+    html_text2()
+  
+  tibble(paper_description, paper_urls) |> 
+    filter(str_detect(paper_urls, "selected_paper_id=")) |> 
+    separate(paper_description, into = c("paper", "authors"), sep = " - ") |> 
+    mutate(author = strsplit(authors, split = ";")) |> 
+    unnest(author) |> 
+    mutate(panel_title = title,
+           panel_description = description)
+}
+
+scrape_panel(panels$panel_links[4])
+```
+
+## Adding some caching
+
+- We identified 455 panels on a single day of APSA.
+- So we will have to make many requests in a loop 
+- If the loop breaks, all progress is gone :(
+- To prevent that, we should build some caching into the function
+
+```{r}
+scrape_panel <- function(url,
+                         cache_dir = "../data/apsa2023/") {
+  
+  # the default is an empty file name
+  f_name <- ""
+  
+  # If the cache_dir is not empty, a file name in constructed
+  if (!is.null(cache_dir)) {
+    # we make sure that the cache folder is created if it does not exist
+    dir.create(cache_dir, showWarnings = FALSE)
+    # we extract the session ID from the URL
+    sess_id <- str_extract(url, "(?<=selected_session_id=)\\d+")
+    # and use it to construct a file path for saving
+    f_name <- file.path(cache_dir, paste0(sess_id, ".rds"))
+  }
+  
+  # if the cache file already exists, we can skip this session :)
+  if (!file.exists(f_name)) {
+    message("Requesting session ", sess_id)
+    html <- request_apsa(url)
+    
+    title <- html |> 
+      html_element("h3") |> 
+      html_text2()
+    
+    description <- html |> 
+      html_element("blockquote") |> 
+      html_text2()
+    
+    paper_urls <- html |> 
+      html_elements("li a") |> 
+      html_attr("href")
+    
+    paper_description <- html |> 
+      html_elements("li a") |> 
+      html_text2()
+    
+    out <- tibble(paper_description, paper_urls) |> 
+      filter(str_detect(paper_urls, "selected_paper_id=")) |> 
+      separate(paper_description, into = c("paper", "authors"), sep = " - ") |> 
+      mutate(author = strsplit(authors, split = ";")) |> 
+      unnest(author) |> 
+      mutate(panel_title = title,
+             panel_description = description)
+    if (!is.null(cache_dir)) {
+      saveRDS(out, f_name)
+    }
+  } else {
+    # If the file does not exist, we read the cached panel data
+    out <- readRDS(f_name)
+  }
+  
+  out
+}
+
+scrape_panel(panels$panel_links[4])
+```
+
+Much quicker, since I've done this before!
+
+## Let's bring it all together
+
+We loop over the days of APSA to collect all links:
+
+```{r}
+days <- seq(as.Date("2023-08-30"), as.Date("2023-09-03"), 1)
+panel_links <- map(days, function(d) {
+  html <- request_apsa(
+    paste0("https://convention2.allacademic.com/one/apsa/apsa23/index.php?cmd=Online+Program+View+Selected+Day+Submissions&selected_day=",
+    d,
+    "&program_focus=browse_by_day_submissions&PHPSESSID=fvjf6ltd4o45kgpv2occcrr0al"
+    ))
+  
+  html |> 
+    html_elements("li a") |> 
+    html_attr("href") |> 
+    str_subset("session_id")
+}) |> 
+  unlist()
+length(panel_links)
+```
+
+And now we iterate over these links to collect all panel data:
+
+```{r}
+apsa_data <- map(panel_links, scrape_panel) |> 
+  bind_rows()
+```
+
+![](media/loop.png)
+
+We make sure to save the combined data:
+
+```{r}
+#| eval: false
+saveRDS(apsa_data, "../data/apsa_2023_data.rds")
+```
+
+And let's check the most prolific authors again:
+
+```{r}
+apsa_data |> 
+  count(author, sort = TRUE)
+```
+
+
+## Exercises 2
+
+1. Use your own cookies and session ID to run the function on the page with the URLs
+
+2. Check the German news website https://www.zeit.de/. It has an interesting quirk that prevents you from scraping the content of the site. What is it and how could you get around it?
+
+
+# Wrap Up
+
+Save some information about the session for reproducibility.
+
+```{r}
+sessionInfo()
+```

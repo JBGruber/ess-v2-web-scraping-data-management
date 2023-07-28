@@ -1,0 +1,491 @@
+---
+title: "Introduction to Web Scraping and Data Management for Social Scientists"
+subtitle: "Session 1: Scraping Interactive Web Pages"
+author: "Johannes B. Gruber"
+date: 2023-07-28
+format:
+  revealjs:
+    smaller: true
+    scrollable: true
+    code-line-numbers: true
+    slide-number: c/t
+    logo: https://essexsummerschool.com/wp-content/uploads/2016/03/essex_logo-mobile.svg
+    self-contained: true
+execute:
+  cache: true
+  echo: true
+highlight-style: pygments
+bibliography: ../references.bib
+---
+
+# When all else fails: control the entire browser
+## Introducing Playwright
+
+![](media/playwright.png)
+
+- Tool for web testing
+- Testing a website and scraping it is actually quite similar
+- It essentially uses a special version of a web browser that can be controlled through code from different languages
+- Unfortunately no `R` package that wraps the API yet (but and `R` package that wraps the Python package)
+- Alternatives you might have heard of: Selenium and Puppeteer
+
+## First, install it
+
+We downloaded the Python package in the first session. But playwright has a second part which needs to be installed from the Terminal. We can run Terminal commands from `R` with `system()` though:
+
+```{r}
+#| eval: false
+playwright_bin <- file.path(dirname(Sys.getenv("RETICULATE_PYTHON")), "playwright")
+system(paste(playwright_bin, "install"))
+```
+
+## Control Playwright from `r` with an experimental package
+
+I did not write the package, but made some changes to make it easier to use.
+We need to install it from my fork for the code below to work:
+
+```{r}
+#| eval: false
+remotes::install_github("JBGruber/playwrightr")
+```
+
+To get started, we first initialise the underlying Python package and then launch Chromium:
+
+```{r}
+library(reticulate)
+library(playwrightr)
+pw_init()
+chrome <- browser_launch("chromium", 
+                         headless = !interactive(), 
+                         user_data_dir = "user_data_dir/")
+```
+
+Now we can navigate to a page:
+
+```{r}
+page <- new_page(chrome)
+goto(page, "https://www.facebook.com/groups/911542605899621")
+```
+![](media/fb_1.png)
+
+When you are in Europe, the page asks for consent to save cookies in your browser:
+
+![](media/fb_1b.png)
+
+We can find the button by its title and click it:
+
+```{r}
+# find the cookie consent button
+consent_button <- get_by_text(page, "Allow all cookies")
+```
+
+We want to only click this button when it is displayed.
+So we use an `if` statement:
+
+```{r}
+if (any(!is.na(consent_button$id))) {
+  # Facebook uses a hidden second consent button to throw you off.
+  # We click the last button that was identified
+  click(page_df = tail(consent_button, 1))
+}
+```
+
+## Getting more posts
+
+This page loads new content when you scroll down.
+We can do this using the `scroll` function:
+
+```{r}
+scroll(page)
+```
+
+![](media/fb_2.png)
+
+## Getting the page content
+
+Okay, we now see the content.
+But what about collecting it?
+We can use several different `get_*` functions to identify specfic elements.
+But wen can also simply get the entire HTML content:
+
+```{r}
+html <- get_content(page)
+html
+```
+
+Convenitently, this is already an `rvest` object.
+So we can use our familiar tools to get to the links of the visible posts.
+The page uses a role attribute which Iemploy here and I know that links to posts contain `posts`:
+
+```{r}
+library(tidyverse, warn.conflicts = FALSE)
+library(rvest)
+post_links <- html |> 
+  html_elements("[role=\"link\"]") |> 
+  html_attr("href") |> 
+  str_subset("posts")
+head(post_links)
+```
+
+## Collecting Post content
+
+Now we can visit the page of one of these posts and collect the content from it:
+
+```{r}
+post1 <- new_page(chrome)
+# go to the page
+goto(post1, post_links[1])
+post1_html <- get_content(post1)
+```
+
+We can check the content we collected locally:
+
+```{r}
+#| eval: false
+check_in_browser <- function(html) {
+  tmp <- tempfile(fileext = ".html")
+  writeLines(as.character(html), tmp)
+  browseURL(tmp)
+}
+check_in_browser(post1_html)
+```
+
+## Scraping the content
+
+The site uses a lot of weird classes. 
+But 
+
+```{r}
+author <- post1_html |> 
+  html_elements("h2") |> 
+  html_text2() |> 
+  head(1)
+
+post_time <- post1_html |> 
+  html_elements("[tabindex=\"0\"]") |> 
+  html_text() |> 
+  str_subset("\\d+ \\w+ at \\d+:\\d+") |> 
+  head(1)
+
+text <- post1_html |> 
+  html_element("[data-ad-comet-preview=\"message\"]") |> 
+  html_text2()
+
+tibble(author, post_time, text)
+```
+
+Looks good!
+So now that we have the content, we can close the page:
+
+```{r}
+close_page(post1)
+```
+
+
+## Exercises 3
+
+1. Write a loop to go through the links we have collected
+
+2. How could you write a function that keeps collecting links and then looks at the posts?
+
+3. What else do you need to build a full scraper?
+
+# Example: Members of Parliament Local Area Development Scheme
+## Background
+
+- "MPLADS is a scheme formulated by the Government of India on 23 December 1993 that enables the members of parliaments (MP) to recommend developmental work in their constituencies with an emphasis on creating durable community assets based on locally felt needs."
+- The website has a form from which you can request data
+- However, this is tedious...
+
+[
+  ![](media/mplads.png)
+](https://www.mplads.gov.in/mplads/AuthenticatedPages/Reports/Citizen/rptCitizenNewWMSReport.aspx)
+
+## Scraping the site?
+
+- From the ending of the URL -- `.aspx` -- you can learn that this is an ASPX (Active Server Page Extended) page
+- Essentially, the data is requested through an API using a key that is produced on the website
+- The requests seem to be controlled by the elemtn with the ID "__VIEWSTATE"
+- You can see how it changes when you change the input of the form
+- You can learn more about scraping a page like this from this video: <https://youtu.be/WZshV5nYVQc>
+- However, the "__VIEWSTATE" in this case is not only encoded, but also encrypted
+
+{{< video local-media/mplads.webm >}}
+
+## Let's use Playwright instead...
+
+We could build our script from `R` like in the last example, but let's try another function called `codegen`.
+We have to call it from the terminal again:
+
+```{r}
+system(paste(playwright_bin, "codegen"))
+```
+
+This should open two windows:
+
+- A Chromium browser as before
+- The Playwright inspector, which records everything you do in the Browser as Pyhton code
+
+![](media/codegen.png)
+
+## Let's check what we produced
+
+```{python}
+#| eval: false
+from playwright.sync_api import Playwright, sync_playwright, expect
+
+
+def run(playwright: Playwright) -> None:
+    browser = playwright.chromium.launch(headless=False)
+    context = browser.new_context()
+    page = context.new_page()
+    page.goto("https://www.mplads.gov.in/mplads/AuthenticatedPages/Reports/Citizen/rptCitizenNewWMSReport.aspx")
+    page.locator("#WebsiteBody_MemberOfParliament_ddlMemberType").select_option("12")
+    page.locator("#WebsiteBody_MemberOfParliament_ddlHouseNo").select_option("8")
+    page.locator("#WebsiteBody_MemberOfParliament_ddlState").select_option("6")
+    page.locator("#WebsiteBody_MemberOfParliament_ddlConstituency").select_option("4762")
+    page.locator("#WebsiteBody_MemberOfParliament_ddlMember").select_option("9182")
+    page.get_by_role("button", name="View Report").click()
+
+    page.locator("#ctl00_WebsiteBody_rpvNewWorkDetails_ctl06_ctl04_ctl00_ButtonLink").click()
+    with page.expect_download() as download_info:
+        with page.expect_popup() as page1_info:
+            page.locator("#ctl00_WebsiteBody_rpvNewWorkDetails_ctl06_ctl04_ctl00_ButtonLink").click()
+        page1 = page1_info.value
+    download = download_info.value
+    page1.close()
+
+    # ---------------------
+    context.close()
+    browser.close()
+
+
+with sync_playwright() as playwright:
+    run(playwright)
+```
+
+## Let's adapt the code a little
+
+- The code now performs exactly the action we recorded
+- However, we want to wrap this in a more useful function to request different things (and actually save the file)
+
+```{python}
+from playwright.sync_api import Playwright, sync_playwright, expect
+import time # we have to import this package so we can wait for the page
+
+def mplads(MemberType = "12",
+           HouseNo = "8",
+           State = "6",
+           Constituency = "4762",
+           Member = "9182",
+           headless=False) -> None:
+  
+    # I moved this bit up to alias the function (which is neccesary)
+    with sync_playwright() as playwright:
+        
+        # I made it possible to control the headless part
+        browser = playwright.chromium.launch(headless=headless)
+        context = browser.new_context()
+        page = context.new_page()
+        page.goto("https://www.mplads.gov.in/mplads/AuthenticatedPages/Reports/Citizen/rptCitizenNewWMSReport.aspx")
+        
+        # its now possible to request different values
+        page.locator("#WebsiteBody_MemberOfParliament_ddlMemberType").select_option(MemberType)
+        page.locator("#WebsiteBody_MemberOfParliament_ddlHouseNo").select_option(HouseNo)
+        page.locator("#WebsiteBody_MemberOfParliament_ddlState").select_option(State)
+        page.locator("#WebsiteBody_MemberOfParliament_ddlConstituency").select_option(Constituency)
+        page.locator("#WebsiteBody_MemberOfParliament_ddlMember").select_option(Member)
+        
+        
+        page.get_by_role("button", name="View Report").click()
+        
+        # after clicking, the page needs a bit to load
+        time.sleep(5)
+        
+        page.locator("#ctl00_WebsiteBody_rpvNewWorkDetails_ctl06_ctl04_ctl00_ButtonLink").click()
+        time.sleep(5)
+        with page.expect_download() as download_info:
+            with page.expect_popup() as page1_info:
+                page.get_by_role("link", name="CSV (comma delimited)").click()
+            page1 = page1_info.value
+            
+        # wait again for the download to start    
+        time.sleep(5)
+        download = download_info.value
+        download.save_as(Member + ".csv")
+        page1.close()
+    
+        # ---------------------
+        context.close()
+        browser.close()
+```
+
+## Let's try it from `R`
+
+```{r}
+library(reticulate)
+py$mplads()
+```
+
+```{r}
+read.csv("9182.csv", skip = 3)
+```
+
+## Let's wrap it up in `R`
+
+```{r}
+req_mplads <- function(MemberType = "12",
+                       HouseNo = "8",
+                       State = "6",
+                       Constituency = "4762",
+                       Member = "9182",
+                       headless=False) {
+  py$mplads(
+    MemberType = MemberType,
+    HouseNo = HouseNo,
+    State = State,
+    Constituency = Constituency,
+    Member = Member,
+    headless = Member
+  )
+}
+```
+
+## But wait: how do I know what options there are?
+
+The Site wraps the options in HTML code that looks like this:
+
+```{html}
+<div class="form-group col-md-6 col-xs-12">
+    <label>
+        <span id="WebsiteBody_MemberOfParliament_lblMemberType">Member Type</span>
+    </label>
+    <select name="ctl00$WebsiteBody$MemberOfParliament$ddlMemberType" onchange="javascript:setTimeout(&#39;__doPostBack(\&#39;ctl00$WebsiteBody$MemberOfParliament$ddlMemberType\&#39;,\&#39;\&#39;)&#39;, 0)" id="WebsiteBody_MemberOfParliament_ddlMemberType" class="form-control" onmouseover="return addTitleAttributes(this);">
+	<option selected="selected" value="0">--All--</option>
+	<option value="11">Rajya Sabha MP</option>
+	<option value="12">Lok Sabha MP</option>
+	<option value="13">RS Nominated MP</option>
+	<option value="14">LS Nominated MP</option>
+
+</select>
+```
+
+```{r}
+html <- read_html("data/options.html")
+lab <- html |> 
+  html_element(".form-group") |> 
+  html_element("label") |> 
+  html_text2()
+
+option <- html |> 
+  html_element(".form-group") |> 
+  html_elements("option") |> 
+  html_text2()
+
+value <- html |> 
+  html_element(".form-group") |> 
+  html_elements("option") |> 
+  html_attr("value")
+tibble(lab, option, value)
+```
+
+## Caching site content
+
+```{python}
+from playwright.sync_api import Playwright, sync_playwright, expect
+import time # we have to import this package so we can wait for the page
+
+def mplads(MemberType = "12",
+           HouseNo = "8",
+           State = "6",
+           Constituency = "4762",
+           Member = "9182",
+           cache = True,
+           headless = False) -> None:
+  
+    # I moved this bit up to alias the function (which is neccesary)
+    with sync_playwright() as playwright:
+        
+        # I made it possible to control the headless part
+        browser = playwright.chromium.launch(headless=headless)
+        context = browser.new_context()
+        page = context.new_page()
+        page.goto("https://www.mplads.gov.in/mplads/AuthenticatedPages/Reports/Citizen/rptCitizenNewWMSReport.aspx")
+        
+        # its now possible to request different values
+        page.locator("#WebsiteBody_MemberOfParliament_ddlMemberType").select_option(MemberType)
+        page.locator("#WebsiteBody_MemberOfParliament_ddlHouseNo").select_option(HouseNo)
+        page.locator("#WebsiteBody_MemberOfParliament_ddlState").select_option(State)
+        page.locator("#WebsiteBody_MemberOfParliament_ddlConstituency").select_option(Constituency)
+        page.locator("#WebsiteBody_MemberOfParliament_ddlMember").select_option(Member)
+        
+        # write page to disk
+        if cache:
+          file_path = MemberType + HouseNo + State + Constituency + Member + ".html"
+          with open(file_path, "a", encoding="utf-8", errors="ignore") as f:
+                      f.write(page.content())
+        
+        
+        page.get_by_role("button", name="View Report").click()
+        
+        # after clicking, the page needs a bit to load
+        time.sleep(5)
+        
+        page.locator("#ctl00_WebsiteBody_rpvNewWorkDetails_ctl06_ctl04_ctl00_ButtonLink").click()
+        time.sleep(5)
+        with page.expect_download() as download_info:
+            with page.expect_popup() as page1_info:
+                page.get_by_role("link", name="CSV (comma delimited)").click()
+            page1 = page1_info.value
+            
+        # wait again for the download to start    
+        time.sleep(5)
+        download = download_info.value
+        download.save_as(Member + ".csv")
+        page1.close()
+    
+        # ---------------------
+        context.close()
+        browser.close()
+```
+
+
+```{r}
+py$mplads()
+```
+
+```{r}
+categories <- read_html("128647629182.html") |> 
+  html_elements(".form-group")
+
+map(categories, function(c) {
+  lab <- c |> 
+    html_element("label") |> 
+    html_text2()
+  
+  option <- c |> 
+    html_elements("option") |> 
+    html_text2()
+  
+  value <- c |> 
+    html_elements("option") |> 
+    html_attr("value")
+  tibble(lab, option, value)
+}) |> 
+  bind_rows()
+```
+
+## Exercises 4
+
+1. Did we get all categories now? See if it changes when you request, for example, a different Member Type
+
+2. What would be the strategy to now get all csv files?
+
+
+# Wrap Up
+
+Save some information about the session for reproducibility.
+
+```{r}
+sessionInfo()
+```
