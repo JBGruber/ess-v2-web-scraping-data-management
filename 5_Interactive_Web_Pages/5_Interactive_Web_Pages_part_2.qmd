@@ -14,11 +14,12 @@ format:
 execute:
   cache: true
   echo: true
+  eval: false
 highlight-style: pygments
 bibliography: ../references.bib
 ---
 
-# When all else fails: control the entire browser
+# When all else fails: strategy 2: control the entire browser
 ## Introducing Playwright
 
 ![](media/playwright.png)
@@ -31,13 +32,62 @@ bibliography: ../references.bib
 
 ## First, install it
 
-We downloaded the Python package in the first session. But playwright has a second part which needs to be installed from the Terminal. We can run Terminal commands from `R` with `system()` though:
+We want to use `playwrightr`, which is an `R` package to control the Python package for Plawright.
+So we need 3 pieces for this:
+
+1. The `R` package: install it with `remotes::install_github("JBGruber/playwrightr")`
+2. The Python package: we installed this into our virtual environment in the first session
+3. The Playwright executable, which consists of a modified version of Chrome that can be remote controlled.
+
+To check if your virtual environment is set up correctly, you can use this command:
+
+```{r}
+basename(Sys.getenv("RETICULATE_PYTHON")) %in% c("python", "python.exe")
+```
+
+This **must** evaluate to `TRUE`!
+If not, check if `Sys.getenv("RETICULATE_PYTHON")` shows you any path.
+If it is `""`, you have not set the path to the virtual environment.
+You can do so with:
+
+```{r}
+if (R.Version()$os == "mingw32") {
+  python_path <- R.utils::getAbsolutePath("../python-env/Scripts/python.exe")
+} else {
+  python_path <- R.utils::getAbsolutePath("../python-env/bin/python")
+}
+python_path
+file.exists(python_path)
+Sys.setenv(RETICULATE_PYTHON = python_path)
+```
+
+Check again with the first chunk if it works now.
+If you want to make this permanent for the RStudio project, you can use `usethis::edit_r_environ(scope = "project")` (more in the first session).
+If it still does not work, your virtual environment was not set up correctly and you need to do it again.
+Also remember to install the plawright Pyhton package with `reticulate::py_install("playwright")`.
+
+Now we just need to download the modified browser for Playwright.
+We can do this in ther Terminal or through `R` with the `system()` command (that sends commands to the terminal.
+
+First we look into the virtual environment to find the Playwright executable.
+
+```{r}
+if (R.Version()$os == "mingw32") {
+  playwright_bin <- file.path(dirname(Sys.getenv("RETICULATE_PYTHON")), "playwright.exe")
+} else {
+  playwright_bin <- file.path(dirname(Sys.getenv("RETICULATE_PYTHON")), "playwright")
+}
+playwright_bin
+```
+
+We tell this executable to install the Chromium browser for us with `install chromium`:
 
 ```{r}
 #| eval: false
-playwright_bin <- file.path(dirname(Sys.getenv("RETICULATE_PYTHON")), "playwright")
-system(paste(playwright_bin, "install"))
+system(paste(playwright_bin, "install chromium"))
 ```
+
+Once this is done, you are all set up.
 
 ## Control Playwright from `r` with an experimental package
 
@@ -52,6 +102,7 @@ remotes::install_github("JBGruber/playwrightr")
 To get started, we first initialise the underlying Python package and then launch Chromium:
 
 ```{r}
+Sys.getenv("RETICULATE_PYTHON")
 library(reticulate)
 library(playwrightr)
 pw_init()
@@ -66,6 +117,7 @@ Now we can navigate to a page:
 page <- new_page(chrome)
 goto(page, "https://www.facebook.com/groups/911542605899621")
 ```
+
 ![](media/fb_1.png)
 
 When you are in Europe, the page asks for consent to save cookies in your browser:
@@ -218,6 +270,7 @@ We could build our script from `R` like in the last example, but let's try anoth
 We have to call it from the terminal again:
 
 ```{r}
+#| eval: false
 system(paste(playwright_bin, "codegen"))
 ```
 
@@ -331,6 +384,14 @@ py$mplads()
 read.csv("9182.csv", skip = 3)
 ```
 
+## Note: weird error?
+
+While puting together the functions and testing them, I kept encountering this error:
+
+![](media/error.png)
+
+I do not yet know the exact background, but don't follow the advice. Simply restart the `R` session.
+
 ## Let's wrap it up in `R`
 
 ```{r}
@@ -339,7 +400,7 @@ req_mplads <- function(MemberType = "12",
                        State = "6",
                        Constituency = "4762",
                        Member = "9182",
-                       headless=False) {
+                       headless=FALSE) {
   py$mplads(
     MemberType = MemberType,
     HouseNo = HouseNo,

@@ -444,6 +444,12 @@ ica_data_df_tidy <- ica_data_df |>
 ica_data_df_tidy
 ```
 
+```{r}
+ica_data_df_tidy |> 
+  filter(!duplicated(paper_title))
+```
+
+
 
 ```{r}
 #| echo: false

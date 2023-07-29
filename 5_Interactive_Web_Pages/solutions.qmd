@@ -9,11 +9,49 @@ format: html
 
 2. I excluded panel 613 since the function fails on that. Investigate what the problem is
 
+```{r}
+desc <- ica_data_df$desc[613]
+papers <- str_extract(desc, "<b>Papers: </b>.+$") |> 
+  str_remove("<b>Papers: </b><br />") |> 
+  # we split the html by double line breaks, since it is not properly formatted as paragraphs
+  strsplit("<br /><br />", fixed = TRUE) |> 
+  pluck(1)
+
+
+# if there is no html code left, just return NAs
+if (all(is.na(papers))) {
+  return(list(list(paper_title = NA, authors = NA)))
+} else {
+  # otherwise we loop through each paper
+  t <- papers[2]
+  map(papers, function(t) {
+    html <- read_html(t)
+    
+    # first line is the title
+    title <- html |> 
+      html_text2() |> 
+      str_extract("^.+\n")
+    
+    # at least authors are formatted italice
+    authors <- html_elements(html, "i") |> 
+      html_text2()
+    
+    list(paper_title = title, authors = authors)
+  })
+}
+check_in_browser(ica_data_df$desc[613])
+```
+
+
 ## Exercises 2
 
 1. Use your own cookies and session ID to run the function on the page with the URLs
 
 2. Check the German news website https://www.zeit.de/. It has an interesting quirk that prevents you from scraping the content of the site. What is it and how could you get around it?
+
+*Die Zeit* is very strict about you agreeing to their cookie policy before you can see ANY content.
+We can copy the cURL call after agreeing to get cookies and then use it from `R`.
+Technical detail: the API seems to check the value of `consentUUID`.
 
 ## Exercises 3
 
