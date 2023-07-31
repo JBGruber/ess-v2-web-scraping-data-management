@@ -9,10 +9,10 @@
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
-<meta name="author" content="Marius Saeltzer" />
+<meta name="author" content="Johannes Gruber &amp; Marius Saeltzer" />
 
 
-<title>Session 6</title>
+<title>Web Scraping and Data Management: Session 6</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -349,8 +349,9 @@ display: none;
 
 
 
-<h1 class="title toc-ignore">Session 6</h1>
-<h4 class="author">Marius Saeltzer</h4>
+<h1 class="title toc-ignore">Web Scraping and Data Management: Session
+6</h1>
+<h4 class="author">Johannes Gruber &amp; Marius Saeltzer</h4>
 <h4 class="date">23 7 2023</h4>
 
 </div>
@@ -394,7 +395,7 @@ Nobody really wants to do it (least me). So why are we here and not do
 the fancy stuff? Three reasons:</p>
 <ol style="list-style-type: decimal">
 <li><p>The Good Stuff is between the Data: Most interesting question
-(i.e. unanwered question) require the collection or recombination of
+(i.e. unanswered question) require the collection or recombination of
 data. A survey will be all drawn out when you see it the first time.
 Combining it with other sources is novelty. The world is full with data
 to answer all these interesting social science questions for the first
@@ -460,13 +461,13 @@ the weekend, you should have collected first data!</p>
 <p>As Johannes already showed, there are two central programming
 paradigms in R: base-r and tidyverse. Both have advantages and
 disadvantages.</p>
-<p>Tidyverse is compact and readible. It allows a logical left to right
+<p>Tidyverse is compact and readable. It allows a logical left to right
 reading of human-oriented formulations like “select, then mutate, then
 summarise”. It also passes objects through pipes, without creating
-(visible) in-between objects. It turns are in a more “functional”
-language and is excellent for reporting. It creates typical paradigms in
-which to work, which makes it more transportable to other coders. I call
-this the horizontality of the language.</p>
+(visible) in-between objects. It turns in a more “functional” language
+and is excellent for reporting. It creates typical paradigms in which to
+work, which makes it more transportable to other coders. I call this the
+horizontality of the language.</p>
 <p>However, it also comes with problems. Tidy tends to pack a lot of
 default options into functions, making it difficult to debug. If
 something goes wrong, you will typically spend a lot of time diving down
@@ -605,8 +606,8 @@ Regex is the most simple way how computers make sense of human language,
 using PATTERN MATCHING. This is a (complicated) language in itself.</p>
 <p>We use the stringr (character strings in R) package to deal with
 this.</p>
-<p>For example, we could match this text and replace indivual elements.
-We can select individual characters.</p>
+<p>For example, we could match this text and replace individual
+elements. We can select individual characters.</p>
 <p>Here is a very brief overview over the types of characters you can
 match.</p>
 <pre class="r"><code>#abc…   Letters
@@ -760,7 +761,7 @@ present=c(3,NA) # numeric
 
 instructor_name=c(&quot;Marius&quot;,&quot;Johannes&quot;,&quot;Martijn&quot;)</code></pre>
 <p>But this is rather arbitrary. We throw away data (names of the
-instructors). We could also encode this completly differently.</p>
+instructors). We could also encode this completely differently.</p>
 <p>We could simply be interested in the number of words in the
 content.</p>
 <pre class="r"><code>length(table(strsplit(content,&quot; &quot;)))</code></pre>
@@ -950,7 +951,7 @@ realize is that this is a specific characteristic of a LIST.</p>
 <p>Even more fun: We can chain down names.</p>
 <pre class="r"><code>l1$data_management$instructors</code></pre>
 <pre><code>## [1] &quot;Johannes&quot; &quot;Marius&quot;</code></pre>
-<p>Treelike data is the opoosing pole of rectangular data: it imposes
+<p>Treelike data is the opposing pole of rectangular data: it imposes
 less structure, but is also not easily manageable. We can’t simply run
 computation on it, making it useless for data analysis. The process of
 data management is to put collected data which is less structured into a
@@ -1055,7 +1056,7 @@ changed two FUNDAMENTAL characteristics.</p>
 <p>It creates REDUNDANCY: The information on students for data
 management is now DUPLICATED. Second, we now changed our UNIT OF
 ANALYSIS. While before, our unit was COURSE, now it is INSTRUCTOR,
-because this now determines the number of overvations.</p>
+because this now determines the number of observations.</p>
 </div>
 </div>
 </div>

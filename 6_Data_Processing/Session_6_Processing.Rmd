@@ -1,6 +1,6 @@
 ---
-title: "Session 6"
-author: "Marius Saeltzer"
+title: "Web Scraping and Data Management: Session 6"
+author: "Johannes Gruber & Marius Saeltzer"
 date: "23 7 2023"
 output: html_document
 ---
