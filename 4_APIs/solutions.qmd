@@ -7,17 +7,147 @@ format: html
 
 1. `httr2` has several more functions to customize how a request is performed. What do these functions do
 
-- `req_throttle`:
-- `req_error`:
-- `req_retry`:
+- `req_throttle`: makes sure to not exceed rate limits of the API by stopping and waiting at a given rate
+- `req_error`: controls how errors should be handled. Can change the interpretation of http codes and display a different error body using a function
+- `req_retry`: if a request fails, this function controls whether, after how long and how often the request is retired
 
 2. You might want to add more information to the data.frame. Adapt the function parse_response to also extract: apiUrl, lastModifiedDate, pillarId
 
-3. Request page 2 from the API
+```{r}
+parse_response <- function(res) {
+  tibble(
+    id = res$id,
+    type = res$type,
+    time = lubridate::ymd_hms(res$webPublicationDate),
+    headline = res$webTitle,
+    text = read_html(pluck(res, "blocks", "body", 1, "bodyHtml")) |> html_text2(),
+    api_url = res$apiUrl,
+    pillar_id = res$pillarId,
+    last_modified = pluck(res, "blocks", "body", 1, "lastModifiedDate")
+  )
+}
+parse_response(res)
+```
 
-4. Make your own request to the API with a different search term
+
+3. Make your own request to the API with a different search term
+
+```{r}
+library(httr2)
+library(tidyverse, warn.conflicts = FALSE)
+req <- request("https://content.guardianapis.com") |>  
+  req_url_path("search") |>                            
+  req_method("GET") |>                                 
+  req_timeout(seconds = 60) |>                            
+  req_headers("User-Agent" = "httr2 guardian test") |> 
+  req_url_query(                                       
+    q = "my own request",  # <- this is where the search term goes
+    "show-blocks" = "all"
+  ) |> 
+  req_url_query(
+    "api-key" = Sys.getenv("GUARDIAN_KEY")
+  )
+  
+# we can also directly parse this
+req |> 
+  req_perform() |> 
+  resp_body_json() |> 
+  pluck("response", "results") |>
+  map(parse_response) |> 
+  bind_rows()
+```
+
+
+4. Request page 2 from the API
+
+The documenation at <https://open-platform.theguardian.com/documentation/> tells us the following:
+
+> In order to page through the results, you can add the page keyword to your query.
+
+```{r}
+req <- request("https://content.guardianapis.com") |>  
+  req_url_path("search") |>                            
+  req_method("GET") |>                                 
+  req_timeout(seconds = 60) |>                            
+  req_headers("User-Agent" = "httr2 guardian test") |> 
+  req_url_query(                                       
+    q = "my own request",
+    "show-blocks" = "all",
+    page = 2  # <- this is where we can add the page parameter
+  ) |> 
+  req_url_query(
+    "api-key" = Sys.getenv("GUARDIAN_KEY")
+  )
+```
+
 
 5. Wrap the request and parsing function in a loop to go through the pages, use `req_throttle` to make not more than 1 request per second
+
+```{r}
+search_guardian <- function(search_query, 
+                            max_pages = 5) {
+  # get page 1 first to know how many pages there are
+  returned_body <- request("https://content.guardianapis.com") |>  
+    req_url_path("search") |>                            
+    req_method("GET") |>                                 
+    req_timeout(seconds = 60) |>                            
+    req_headers("User-Agent" = "httr2 guardian test") |> 
+    req_url_query(                                       
+      q = search_query,
+      "show-blocks" = "all",
+      page = 1  
+    ) |> 
+    req_url_query(
+      "api-key" = Sys.getenv("GUARDIAN_KEY")
+    ) |> 
+    req_perform() |> 
+    resp_body_json()
+  
+  n_pages <- pluck(returned_body, "response", "pages")
+  n_results <- pluck(returned_body, "response", "total")
+  
+  # display a message for the user
+  message(glue::glue("{n_results} results found for the query. Looping through {n_pages} pages"))
+  
+  results <- returned_body |> 
+    pluck("response", "results") |>
+    map(parse_response) |> 
+    bind_rows() |> 
+    list()
+  
+  n_pages <- min(n_pages, max_pages)
+  
+  for (p in 2:n_pages) {
+    message("... getting page ", p)
+    returned_body <- request("https://content.guardianapis.com") |>  
+      req_url_path("search") |>                            
+      req_method("GET") |>                                 
+      req_timeout(seconds = 60) |>     
+      req_throttle(rate = 1) |> 
+      req_headers("User-Agent" = "httr2 guardian test") |> 
+      req_url_query(                                       
+        q = search_query,
+        "show-blocks" = "all",
+        page = p  
+      ) |> 
+      req_url_query(
+        "api-key" = Sys.getenv("GUARDIAN_KEY")
+      ) |> 
+      req_perform() |> 
+      resp_body_json()
+    
+    results[[p]] <- returned_body |> 
+      pluck("response", "results") |>
+      map(parse_response) |> 
+      bind_rows()
+  }
+  return(bind_rows(results))
+}
+search_guardian("test")
+```
+
+Note: this should probably be improved as it will currently fail on any error the API returns, which destroys any partial progress made until this point.
+So for a *good* function, you should build in some caching on disk (i.e., save the response from every iteration on disk) and some error handling with `req_error`.
 
 ## Exercises 2
 
