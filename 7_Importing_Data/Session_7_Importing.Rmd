@@ -1,0 +1,702 @@
+---
+title: "Importing Data"
+author: "Marius Saeltzer"
+date: "23 7 2023"
+output: html_document
+---
+
+
+```{r}
+
+library(jsonlite)
+library(httr2)
+library(tidyverse)
+library(haven)
+
+```
+We talked about general forms of data files. How we can store information in a particular structure, and the consequences it has. We rarely are free to define how data looks like. We have to deal with what we have. Today, 
+we talk about how to work with data in practice.
+
+
+
+# Exercise 3:
+
+Please note your answers to these questions (5 Minutes)
+
+*  What defines tabular/rectangular data?
+  
+*  What are advantages of treelike data in comparison?
+  
+*  What are possible problems when turning trees into tables?
+  
+*  Indicate the problems you had yesterday when putting data into form.
+  
+
+First, we will learn how to implement transformations of data, moving it across levels of analysis and shapes. 
+
+Second, we will learn how to import data into R. I know you already know how to do this, mostly, but we will go deep on what to do with reelike data, file systems, file encodings, remote databases etc. We will also learn tools to MAKE sense of new datasets we encounter in the wild.
+
+* Readings: Weidmann 2023: p. 39-58
+
+
+This session is basically about getting data into a form that we can work with it. 
+
+
+Now we see that R can be used to create and manipulate objects which contain values. In the end, all data operations can be reduced to this. But to do statstics, we will want to read in real data.
+
+
+# FILES
+Data can be read in from two prototypical sources:
+
+
+* Files 
+
+  + textfiles
+  
+  + binary files 
+  
+* Databases
+
+
+The typical place we get data from as social scientists are files. Whether it is excel, csv or spss, they are typically transported as self-contained blobs of data. 
+
+There are two broad classes:
+
+  Text files: which only contain characters and are interpretable by the human eye
+      
+      csv
+      json
+      xml/html
+        
+  binary files: data that is not readibly without an intepretation help 
+      
+ *image
+ *video
+ *executables
+ *compressed (zip,tar,...)
+ *Program files (rdata,rds)      
+ *Propietory Formats (Stata, SPSS etc.)
+
+In general, you will find a tradeoff between compression (textfiles are larger) and reusability.
+While textfiles will always be interpretable, binaries depend on programs to read them. If those are closed
+source, you will be in trouble.
+
+
+### Directories and the File System 
+
+Both data sources can either be stored remotely or locally. Most of you will have experience accessing files locally, but maybe there are some useful tricks you can still learn.
+
+The working directory is the place on a drive where R looks for data first. It allows you to directly call files without their exact location. Depending on the setting, it has to be defined (like in acient times) or you will have it defined by a) your R-Studio Project file or b) your document.
+
+Extra bad example:
+
+
+```{r}
+
+#setwd('C:\Users\admin\Documents\Lehre\Lehre FSS 19\Data')
+
+``` 
+
+However. I suggest you do not rely on this. Setting working directories is considered bad practice, as this is something people always have to change when moving a project around. It is highly suggested you use projects or Mardown files. 
+
+If you go old school and use a non-markdown, non-project environment, you can use this line of code:
+
+```{r}
+#setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+```
+
+
+It will set your working directory to where the document was placed. Avoid this if possible. 
+
+
+## File Management
+
+
+
+Instead, you should use relative pathes.
+
+As we talk a lot about trees around here: your file system is exactly that. You can of course treat it as such an make use of it. You can navigate
+
+./ go to a subdirectory from HERE  
+
+../ UP from here 
+
+
+R allows to manipulate directories!
+
+Right now, we are in a directory where no local data is stored.
+```{r}
+list.files()
+
+```
+But we can go elsewhere of course!
+```{r}
+list.files("..")
+
+```
+gives you all the files of the Course. We can check what is in the data file from here.
+
+
+```{r}
+
+list.files("../data/")
+```
+
+And of course we change the FS also.
+
+```{r}
+
+dir.create("files")
+dir.create("files/more_files")
+
+list.files("./files")
+
+```
+
+## How to name files 
+
+
+Machine-readable file names: 
+
+Depending on the machine people are using, this can be problem or not, but you should always beware to 
+
+
+NO SPACES!
+
+NO SPECIAL CHARACTERS!
+
+Please use ASCII. I fried my OS last week because university thought it would be great to call me users/Sältzer/ 
+
+
+NO UPPER CASE! 
+
+Linux (and accordingly, servers), are case senstive. 
+
+
+
+File names that sort well 
+
+
+
+## Building a directory
+
+I like to build a research project like this:
+
+```{r}
+build<-T
+
+if(build==T){
+dir.create("myproject")
+dir.create("myproject/tools") # for helper functions we use across scripts and load packages 
+  
+dir.create("myproject/data") # for data
+  dir.create("myproject/data/raw") # as we get it
+  dir.create("myproject/data/analysis") # as we process it for analysis
+
+dir.create("myproject/plots") 
+  dir.create("myproject/plots/main")
+  dir.create("myproject/plots/appendix")
+
+dir.create("myproject/results")
+  dir.create("myproject/results/main")
+  dir.create("myproject/results/appendix")
+
+dir.create("myproject/scripts") # if you like to split your analysis into individual steps, this is useful 
+# as you can then sequentially source them!
+    
+}
+```
+
+good example of a scripts folder:
+
+01_data_collection.R
+02_data_processing.R
+03a_joining.R
+03b_aggregation.R
+04_analysis.R
+05_plotting.R
+
+```{r}
+writeLines(con = "myproject/scripts/01_data_collection.R",text = "print('Hello Data')")
+
+```
+
+Using the source command then lets you run scripts from other files (in Full).
+
+```{r}
+source("myproject/scripts/01_data_collection.R")
+```
+
+# EXERCISE 
+
+Create a directory for your research project. Use comments and mock code inside these scripts to describe what each script is doing!
+
+
+
+
+#  Loading in Data 
+
+While this seems trivial to most experienced R-users, reading in files can lead to surprising amount of issues. Beyond the question of where they are, they also have the problem of what they are. Different types of files have different properties that may or may not be straightforward to handle.
+
+Second, while we can import all kinds of data, there are two places where to look for: locally and in the internet. We will make use of getting data from the internet directly and placing it on our drive in different forms. We will then talk about some major issues regarding this, most of them relating to locales and data type.
+
+
+## Getting data in
+
+
+As you can see in the help file, the function has a number of arguments, most importantly FILE which tells the computer what to open. 
+read.csv is a special case of read.table which has a lot decided before, like what kind of file it is supposed to open. The default is the
+Comma-separated values file, the mighty CSV.
+
+It is by far the most common way of storing data. This is what people mostly refer to as "excel-file", which is just a csv that is rendered unreadable for anyone unwilling to pay for it. Let's try it out. 
+
+
+We can import all kinds of data, there are two places where to look for: locally and in the internet. 
+
+This can be a path on your computer, but also an URL.
+
+read.csv is a function. It takes arguments and turns it into something. There are quite many arguments of the read.table, you can tell the computer very precisely what to do  including what the separator is, how quotes are defined, if there is a header line and million ither things. 
+
+The computer splits values in columns by the comma. As you can see, it interprets the first line as column names by default.
+
+```{r}
+d1<-read.csv(url("https://raw.githubusercontent.com/msaeltzer/classified/master/data/polls.csv"))
+
+```
+
+This can be a path on your computer, but also an URL.
+
+###  Loading in Data 
+read.csv is a function. It takes arguments and turns it into something. There are quite many arguments of the read.table, you can tell the computer very precisely what to do  including what the separator is, how quotes are defined, if there is a header line and million ither things. 
+
+
+The computer splits values in columns by the comma. As you can see, it interprets the first line as column names by default and imports all strings as factors.
+
+```{r}
+d1<-read.csv(url("https://raw.githubusercontent.com/msaeltzer/classified/master/data/polls.csv"))
+
+```
+
+## LOCALE
+
+One problem that even terrorizes experienced users, especially from non-englishspeaking countries (or english-speakers dealing with non-english data) are LOCALES. In my experience, a vast majority of errors I encounter happens because of this, because typically this is not considered in tutorials when learning new things to code. 
+
+This comes mainly in form of three problems: file encodings, separators and dates.
+
+
+```{r}
+Sys.getlocale()
+```
+
+
+
+### The Terror of the ENCODINGS
+
+One typical problem of many users is the encoding issue. But once we understood why we need encodings and how they work, we can deal with this.
+
+File encodings result from a central problem of human communication: our languages differ, and this leads to different symbols. 
+
+Any language has to be expressed in a limited number of characters, which again have to be coded down to 1 and 0 for the computer to understand. Encodings are translation schemes. The more different characters you want to express, the more complex the 0-1 scheme has to become to create a higher number of unique characters. The simplest code, programming code, is coded in ASCII.
+
+ASCII was designed for english-speakers and basically only contains the most basic symbols (characters and numbers) from the english language. Computers work in ASCII. It translates machine code into characters. Everything we add on top has to be expressed in ASCII. Accordingly, we need patterns of ASCII that MAP into other patterns. These patterns are encodings.
+
+A very complex coding scheme such as UTF-32, which can contain 2^32 different characters, will be 4x as memory intensive as UTF-8, which can only store 2^8 values. 
+
+This leads to a trade-off: we create data space to theoretically store 2^32 characters, but only need 2^8+8 that are specific for the language. This would be a waste of ressources. Accordingly, most institutions use 8-bit systems appropriate for their language and those very close to them. This creates a wildfire of encoding schemes. 
+
+RStudio will automatically represent text following your OS configuration. For sensible systems (MacOS, Linux) this is always UTF-8. In window, this will depend on your own country version. 
+
+To understand how your computer deals with this, we need to know about how encodings are actually used in R. 
+
+FILE-LEVEL:
+
+When data is stored in a file system, it is typically encoded in UTF-8, unless specified otherwise. However, many non-english versions of software EXPORT their data in other formats, for example LATIN-1, or a windows-ecoding, by default. 
+
+R
+
+When you import data into R, you can choose the Encoding. It also has a default encoding that decides how it represents data to you. If your computer is set to UTF-8 (as is standard now), reading in data as UTF-8 will be displayed regularly.
+
+```{r}
+b0<-readLines("./bad_data/utf8.csv")
+```
+
+```{r}
+b0<-readLines("./bad_data/bad.csv")
+```
+
+while reading a differently encoded file it in as UTF-8 leads to what we call "Grütze" in Germany (which als has special characters.)
+
+But once you set the read in as latin1, in which it is approximately encoded, it looks like this.
+
+```{r}
+b1<-readLines("./bad_data/test.csv",encoding = "latin1")
+b1
+```
+
+We will now save it, using the default LOCALE of the computer...
+
+```{r}
+writeLines(b1,"bad_data/test_utf-8.csv")
+```
+
+...and reload it, and it is cleaned.
+
+```{r}
+b0<-readLines("./bad_data/test_utf-8.csv")
+b0
+
+```
+So how do we find out encoding is used?
+
+```{r}
+readr::guess_encoding("./bad_data/test.csv")
+
+```
+```{r}
+readr::guess_encoding("./bad_data/test_utf-8.csv")
+
+```
+We can also shift the encodings of variables individually. Let's reimport the data as a table. Before we can do that, we have to talk about other issues. 
+
+Let's re-import the data without proper encodings.
+```{r}
+b2<-readLines("./bad_data/test.csv")
+b2
+
+```
+
+Looks like Grütze, again. Let's convert it inside R.
+
+```{r}
+b2a<-iconv(b2,from="latin1",to="UTF-8")
+b2a
+```
+
+
+This just a very brief introduction with a few straighforward solutions. In some data files, in particular when doing webscraping this can be more complex, and contain mixed encodings. For example, if the html file itself is encoded in UTF-8, using special characters, and then containing pasted plain text from a German MS Word docx file, inserted on a WINDOWS machine. 
+This is stuff nighmares are made of and very difficult to heal without manual character replacements. 
+
+
+
+## Separators and Decimal Points
+
+File formats are not only differing on the file level, but also WHAT is encoded. Depending on the country you are in, these things can be very different. Germany for example does not use decimal points, but decimal commata. Accordingly, importing CSV data from a German source would be a nightmare. While there are modrn conventions of using quotation marks, the German solution is much more confusing. Instead of using , as a separator, they use ;. Accordingly, we must change the sep=; and the dec=, when importing csv, along with using the latin 1 option.
+
+```{r}
+
+bt<-read.csv("./bad_data/test.csv",sep=";",dec=",",encoding="latin1")
+```
+
+
+## Dates
+
+While dates are standardized in many computational settings, they are typically not used homogeneously across the world. This is a) because of different notations and b) different time zones. Accordingly, dates can create chaos in data if not correctly specified. 
+
+Different programming languages use slightly different versions of time(stamps), so I will adress the most important functions and traps you might encounter.
+
+```{r}
+
+class(d1$date)
+
+d1$date<-as.Date(d1$date)
+
+```
+
+Here, this works fine, but what if you use other data formats?
+
+
+
+```{r}
+
+ger_birthdate<-c("01.01.2010","15.02.2015","01.07.1995","01.11.2003")
+
+#df$ger_birthdate<-as.Date(df$ger_birthdate)
+
+ger_birthdate<-as.Date(ger_birthdate,format = "%d.%m.%Y") # day, month, year 
+
+ger_birthdate
+
+```
+
+POSIXct: sequence of integers
+POSIXlt:list  
+
+
+```{r}
+Sys.timezone(location = TRUE) # this is a setting from the OS.
+Sys.time()
+```
+
+
+```{r}
+# print today's date
+today <- Sys.Date()
+format(today, format="%B %d %Y")
+"June 20 2007"
+```
+
+
+%d	day as a number (0-31)	01-31
+%a
+%A	abbreviated weekday
+unabbreviated weekday	Mon
+Monday
+%m	month (00-12)	00-12
+%b
+%B	abbreviated month
+unabbreviated month	Jan
+January
+%y
+%Y	2-digit year
+4-digit year	07
+2007
+
+```{r}
+x <- "2023-08-01 12:00:00"
+x<-as.POSIXct(x,tz = "GMT")
+
+```
+
+```{r}
+y <- "2023-08-01 13:00:00"
+y<-as.POSIXct(y)
+
+```
+
+
+```{r}
+y-x
+```
+
+
+### Exercises: Convert the following time stamps
+
+
+```{r}
+
+```
+
+
+
+
+## Complex Data Structures
+
+Not all data can be stored in a rectangular form. Often data is closer to a list than a data frame. There are two main file formats that allow storing structured, not rectangular data. Examples are JSON and XML.
+
+### From JSON/XML
+
+Using the jsonlite package, we have the importing function. In this case, we get data directly from the homepage!
+
+```{r}
+query<-"Ryan Bakker"
+resp <- request("https://api.semanticscholar.org/graph/v1/author/search") %>%
+    req_url_query(query = query) %>%
+    req_url_query(fields = "name,papers.title,papers.fieldsOfStudy",limit=1000L) %>%
+
+    req_perform()
+```
+
+
+We can transform the JSON file into an R list, as the data has the same structure
+
+```{r}
+ll<-resp_body_json(resp)
+```
+
+As we can see, there are 2 Marius's!
+
+```{r}
+ll$data[[1]]$name
+
+ll$data[[2]]$name
+
+
+```
+You can see the first merging problem that will haunt us tomorrow :)
+
+
+So what can we do to unlist this stuff? Let's start like we have no idea 
+
+```{r}
+
+ll$data[[1]]$papers[[1]]
+
+```
+
+We have 2 elements in this list, each has again 3 data points:
+  
+*  PaperID
+*  Title
+*  FieldsOfStudy
+
+
+Now we can see the dilemma of the JSON file: to unnest this data, we would have create a data structure das contains all the data, but in rectangular form. This could be a very wide dataset, like a variable for every paper, its id and its name. Or it could be a very long entry that contains every paper with the paper as unit of analysis. 
+
+The deeper the data goes, if we add more information on the paper level, the deeper the unit of analysis will go. 
+Let's do the unpacking you did in the API session briefly.
+
+
+```{r}
+
+
+find_scholar <- function(query) {
+  resp <- request("https://api.semanticscholar.org/graph/v1/author/search") %>%
+    req_url_query(query = query) %>%
+    req_url_query(fields = "name,papers.title,papers.fieldsOfStudy",limit=1000L) %>%
+
+    req_perform() %>%
+    resp_body_json()
+  data <- pluck(resp, "data")
+  tibble(name = map_chr(data, "name"),
+         author_Id = map_chr(data, "authorId"),
+         papers =  map(data, "papers"))
+}
+
+
+d1<-find_scholar(query)
+
+```
+
+
+We build a function that allows to extract the authorship data
+
+
+```{r}
+
+scholar_unnest<-function(x){
+  if(nrow(x)>0){ # if data was retrieved for the query
+  out <- x %>%
+  unnest(papers) %>%
+  unnest_wider(papers) %>%
+  unnest(fieldsOfStudy)%>%
+  unnest(fieldsOfStudy)}else(out<-x) # else keep the named list
+return(out)}
+
+
+
+
+
+d2<-scholar_unnest(d1)
+
+```
+
+There are just very few publications in this tiny file. Now imagine somebody has dozens of papers. Or we push the unit of analysis further down. 
+
+
+## Data Project
+
+As mentioned before, we want to do a little course project: collecting data on conferences. We start with the 2023 ECPR conference. You already scraped these lists. And now we will put them together. We use this list as a seed for furher data collection, make sense of who is who, and maybe even extract coauthoriship networks that allows combining them!
+
+Let's import a seed dataset. 
+```{r}
+r1<-readRDS("../seeds/ecpr_2023_data.rds")
+```
+
+
+Let's scale things up here for our database
+
+We use a seed list of authors from 2023 ECPR
+
+
+We will now turn the API-call into a loop, since we want to get data from all the users
+We use a for-loop. In general, don't do this in R, since it is slow. Here, as we call an API, it doesn't really matter and we get a maximum of control over the situation.
+
+```{r}
+# documentation: https://api.semanticscholar.org/api-docs/graph#tag/Author-Data/operation/get_graph_get_author
+
+
+aut<-unique(r1$authors)
+
+run<-F
+
+if(run==T){
+# We define an empty list to store the results in
+scholars<-list()
+for(i in 1:length(aut)){ # and loop over all authors
+  print(i)
+  scholars[[i]]<-find_scholar(aut[i]) # storing the data
+  names(scholars)[i]<-aut[i] # and naming the list element after the search query
+}
+
+# Create data dir if not yet there
+# Saving the data as RDS
+saveRDS(scholars,file="../data/scholars.rds")}else{scholars<-readRDS("../data/scholars.rds")}
+
+```
+
+
+
+```{r}
+
+sc2<-list()
+for(i in 1:length(scholars)){
+  if(nrow(scholars[[i]])>0){ # if data was retrieved for the query
+  out<-scholar_unnest(scholars[[i]])
+  out$query<-names(scholars)[i]
+  sc2[[i]]<-out
+  }
+}
+```
+
+And put it into a data.frame.
+
+```{r}
+
+pol3<-do.call(rbind,sc2)
+
+```
+
+The redundancies in this dataset are tremendous: only about 5%of the author string data is useful. 
+
+
+```{r}
+length(unique(pol3$author_Id))/nrow(pol3)
+```
+
+We create a dataset of pseudomatches to work on in the next session,
+
+```{r}
+
+pol3$pol<-pol3$fieldsOfStudy=="Political Science"
+
+unique_authors_t<-aggregate(pol~author_Id+name+query,pol3,FUN="length")
+unique_authors<-aggregate(pol~author_Id+name+query,pol3,FUN="sum")
+unique_authors$total<-unique_authors_t$pol
+
+
+```
+
+
+```{r}
+saveRDS(unique_authors,file="../data/scholars_flat.rds")
+```
+
+## Exercise (15 Min ++)
+
+Extend your directory and fill the scripts. Write correct import functions that implement yesterday's code for transforming data in forms relevant to your data.
+
+```{r}
+
+
+```
+
+
+# Exercise: The Austrian Case
+
+Let us get another datase (Instructions in Class)
+
+```{r}
+json <- request("https://www.parlament.gv.at/Filter/api/json/post") %>% 
+  req_method("POST") |> 
+  req_url_query(
+    jsMode = "EVAL",
+    FBEZ = "WFW_008",
+    showAll = TRUE,
+    export = TRUE
+  ) |> 
+  req_body_raw("{\"M\":[\"M\"],\"W\":[\"W\"],\"R_WF\":[\"FR\"]}", "application/json; charset=utf-8") %>% 
+  req_perform() |> 
+  resp_body_json()
+```
+
+
