@@ -1,0 +1,748 @@
+---
+title: "Linking Data"
+author: "Marius Saeltzer"
+date: "23 7 2023"
+output: html_document
+---
+
+Session 3: Linking Data
+
+
+
+```{r}
+if(!require(RMySQL)){install.packages("RMySQL")}
+if(!require(stringdist)){install.packages("stringdist")}
+if(!require(fuzzyjoin)){install.packages("fuzzyjoin")}
+
+library(RMySQL)
+library(fuzzyjoin)
+library(stringdist)
+library(stringr)
+
+```
+
+
+
+# Databases 
+
+While csv files are a very common way to transport small datasets, they have significant disadvantages: 
+
+1. they are final products. You can update them, but once they moved somewhere, you have lost control over them. For collaborative work, as it has become standard in the social sciences, this is suboptimal. We need a dynamic solution
+
+
+2. Datasets are typically small in the social sciences, but this rapidly changing. Text data from social media feeds is quickly becoming very large, larger even then your working memory. While there are options for streaming data from the hard drive, we could also apply the industry standard. We need a scalable solution.
+
+
+3. The tree-tabular problem and resulting redundancies will come back and bite you sooner or later. To solve this once and for all, we need relational data. We will talk about this tomorrow.
+
+Today I will show you how to change your workflow to use DATABASES.
+
+
+## Local and Remote
+
+Databases are basically connected tables. Where they are stored is pretty much irrelevant. You can build a server on your local machine just like on a remote machine.
+
+
+## Building an SQL Database
+
+Most of the worlds data is stored in databases and most of these databases are built in a language called SQL (Structured Query Language).
+
+
+There are many different versions of databases, but the most common one by far is SQL (sequel,or ess-kju-el). SQL database describes a relational tabular database.
+There are also noSQL approaches that can store treelike objects, but for us, this is unnecessary, as we will learn to represent trees through relational table structures.
+
+
+SQL again comes in different dialects: postgreSQL, SQLlite etc.
+
+In this course we will use MySQL, mainly because it is a widely-used dialect MySQL. It really doesn't matter which one you choose in most cases, for me it is a path-dependency, tbh. I don't have strong opinions on which one to use. 
+
+If you want to do this here, we first have to install MySQL Server. Just install it along with the workbench.
+
+To log into a database, we have to authentifcate as a user. We will first do outside R. On Ubuntu, this is trivial in the terminal, but in Windows it is safer and easier to do this using the MySQL installer...
+
+
+```{r}
+
+db_user <- 'Student'
+db_password <- 'password'
+db_name <- 'essex'
+db_host <- 'localhost' # for local access
+db_port <- 3306
+
+# Connect to database
+mydb <-  dbConnect(RMySQL::MySQL(), user = db_user, password = db_password,
+                 dbname = db_name, host = db_host, port = db_port)
+
+
+compile<-F
+if(compile==T){
+dbExecute(mydb,"drop table ecpr_authors;")
+dbExecute(mydb,"drop table ecpr_authors2;")
+dbExecute(mydb,"drop table semantic;")
+dbExecute(mydb,"drop table courses;")
+dbExecute(mydb,"drop table instructors;")
+}
+```
+
+## Uploading Data 
+
+You can pass any SQL command using the dbExecute function!
+
+or create an empty table or you can upload stuff!
+
+```{r}
+dbExecute(mydb, 'CREATE TABLE test_table(id int, name text)')
+
+```
+
+and Kill it...
+```{r}
+dbExecute(mydb, 'DROP TABLE test_table')
+
+```
+
+
+Let's start building our conference database!
+
+```{r}
+
+r1<-readRDS("../seeds/ecpr_2023_data.rds")
+```
+
+
+## Creating Constraints
+
+Up until now, we created tables by importing it directly from R. However, with relational databases, we can give the columns specific meanings inside the data structure, as keys or constraints. They allow us to exactly control what happens in a dataset. 
+
+To do so, we need to create tables with contraints
+
+Now, as we have created the empty data sets, we can fill them with the data at hand. We can therefore migrate data from the large, unconstrained table in the more limited, structured table.
+
+We will first create a table for our ecpr data
+
+```{r}
+dbExecute(mydb,"create table ecpr_authors ( 
+          panel_id int,
+          event_id int,
+          paper_title varchar(500),
+          authors varchar(30))
+          ;")
+
+#dbExecute(mydb,"drop table ecpr_authors;")
+```
+
+To put data into a database, you have to consistently enter the data.
+
+```{r}
+query <- 'insert into ecpr_authors(panel_id,event_id,paper_title,authors) VALUES(123,2345,"a weird title","me")'
+
+dbExecute(mydb,query)
+
+
+```
+Our data is very consistent, as we defined constraints: this will create an error:
+```{r}{EVAL=FALSE}
+query <- 'insert into ecpr_authors(panel_id,event_id,paper_title,authors) VALUES(123,"hodor","a weird title","me")'
+
+dbExecute(mydb,query)
+
+```
+However, this is extremely tedious. There has to be a better way, and there is. 
+```{r}
+dbWriteTable(mydb,"ecpr_authors",d1,append=T,row_names=F)
+
+```
+However, this does not work, for security reasons. You will have to enter as root and change that.
+
+
+
+
+```{r}{eval=FALSE}
+user <- 'root'
+db_password <- 'rootpassword'
+db_name <- 'essex'
+db_host <- 'localhost' # for local access
+db_port <- 3306
+
+# Connect to database
+mydb <-  dbConnect(RMySQL::MySQL(), user = db_user, password = db_password,
+                 dbname = db_name, host = db_host, port = db_port)
+
+```
+
+
+```{r}{eval=FALSE}
+dbExecute(mydb,"SET GLOBAL local_infile=1;")
+```
+
+```{r}
+#dbExecute(mydb,"drop table ecpr_authors2;")
+
+dbWriteTable(mydb,"ecpr_authors2",data,append=T)
+
+```
+
+
+
+```{r}
+dbGetQuery(mydb,"select * from ecpr_authors2;")
+```
+
+
+## Accessing data
+
+Now, we can use SQL to query our data 
+
+Structure of a request: 
+    COMMAND *
+    FROM the_table_you_want; 
+    
+    
+FROM == [] or $ # describes an object
+AS   == aliasing (change the names inside a query to make it shorter i.e)
+
+SELECT == r[,i] # selects columns
+WHERE == r[i,]  # Selects rows based on logic
+
+
+DISTINCT == unique() # reduces to unique values
+ORDER BY == order() # sorts data
+LIKE == grepl()  # search by regular expression 
+GROUP BY 
+```{r}
+s <- paste0("select * from ecpr_authors")
+x <- dbGetQuery(mydb, s)
+
+
+```
+
+
+
+    
+```{r}
+
+dbGetQuery(mydb, ' 
+           SELECT "paper_title" 
+           FROM ecpr_authors;                 
+                              ')              
+
+```
+
+```{r}
+dbGetQuery(mydb, ' 
+           SELECT "paper_title","author"
+           FROM ecpr_authors2;                 
+                              ')              
+```
+
+As you can see, this is quite intuitive and can be used to custom tailor your access just as in R itself.
+
+Of course, you can just extract the whole table into a dataframe again using 
+```{r}
+
+count<-dbGetQuery(mydb, ' 
+           select count(*) from ecpr_authors2;')                
+
+```
+
+
+### summary by
+
+We can also call summary commands just like we did with the aggregate function.
+
+```{r}
+df2<-dbGetQuery(mydb, ' 
+           select COUNT(authors),paper_title from ecpr_authors2 
+           group by (paper_title);')                
+
+```
+
+We can now add a second table:
+
+```{r}
+
+dbListFields(mydb,"semantic")
+
+count<-dbGetQuery(mydb, ' 
+           SELECT AVG(pol),name FROM semantic GROUP BY (name);')                
+
+```
+
+The WHERE statement lets you subset.
+
+```{r}
+
+pol<-dbGetQuery(mydb, ' 
+           SELECT * from semantic WHERE pol>0;')                
+
+```
+
+
+
+
+# Relational Data bases 
+
+
+We have introduced a series of query tools, but in spite of them being stored together they have little advantage over storing data in a list of list or an XML. The real power of SQL becomes obvious when making a database relational. 
+
+The problem of storing treelike data in tabular form ready to compute is that it typically requires multiple tabular connections. In other word: using a relationship between a row and a column in a cell is not enough. In our first case, we had multiple information frames.
+
+One on the author level and one on the course level. This creates redundancy. 
+```{r}
+df<-data.frame(course=c("data management","data management","text as data"), instructors = c("Johannes","Marius","Martijn"),students=c(6,6,10),present=c(3,3,NA))
+
+```
+
+We also represent this data in two tables:
+
+```{r}
+
+df_ins<-data.frame(course=c("data management","data management","text as data"), instructors = c("Johannes","Marius","Martijn"))
+
+df_course<-data.frame(course=c("data management","text as data"),students=c(6,10),present=c(3,NA))
+
+```
+
+Now, the data is complete. We can store it in a list, or a database. If we need it, we just...JOIN (or merge).
+
+
+
+
+# Power of Linking Data 
+
+One of the main concepts of this course is to collect data from different sources about the same unit of analysis. This leads to complex data structures that can be shifted in combined and reshaped to analyze comprehensively.
+
+
+
+
+```{r}
+merge(df_ins,df_course,by="course")
+
+```
+We can reconstruct the previous form of the data, but we stored the only redundancy are common variables. This is what we call a KEY.
+
+
+
+
+For this example, we use a great example of our data from two previous sessions. In session 1, we looked at the ECPR dataset.
+
+```{r}
+r1<-readRDS("../seeds/ecpr_2023_data.rds")
+p<-aggregate(paper_title~authors,r1,FUN="length")
+
+```
+
+In session 2, we used this data set to collect data on all these persons. 
+
+This dataset contains the search query which allows us to directly match them.
+
+```{r}
+scholars<-readRDS("../data/scholars_flat.rds")
+
+```
+
+We can check if this works
+```{r}
+
+all(unique(scholars$query)%in%p$authors)
+
+```
+
+On the other hand, not all the found people are in the original dataset.
+```{r}
+all(unique(scholars$name)%in%p$authors)
+
+```
+
+
+If the variables by which to match do not have the same name, you can either change the name or specify
+
+It is very important to make sure the uniqiue values are homogeneous and of the same type. Little differences in spelling will lead to a mismatch. The best way is to use not name, but unique id, such as a number stored in a string.
+
+The beauty of R is that you can step by step merge as many data sets as you like, aggregate them and reshape them according to your needs.   
+  
+We can join these datasets now on the query to the author.
+```{r}
+
+r2<-merge(scholars,p,by.x="query",by.y="authors")
+
+names(r2)[6]<-"papers_on_ecpr"
+```
+
+
+```{r}
+sum(duplicated(r2$authors)) 
+```
+The query variable is of course extremely easy to match, as the scholars dataset was created using it. However, We have no idea which of these authors are correct and which are wrong. We will use some detective work to uncover this!
+
+We are more interested in the variables p$authors & scholars$name as they would reflect the actual connection between author ID and ecpr. In a perfect world, both datasets would use a unique identifier system, such as ORCHID. However, since we don't have that, we need to look at our ability to join the data on imperfect variables. This is called fuzzy joining.
+
+We differentiate in 4 types of results:
+
+* True Positive Matches
+* True Negative Matches 
+* False Positive Matches 
+* False Negative matches: This is the central problem here,
+
+When we do this, the results look much worse:
+```{r}
+r3<-merge(scholars,p,by.x="name",by.y="authors")
+
+```
+
+We only have 4599 matches. This means that 
+```{r}
+nrow(r2)-nrow(r3)
+```
+were approximate matches using the query function of semantic scholar. At the same time, we can't be sure that these matches are actually not false positives, as yesterday, we saw Ryan Bakker occurs in the data 2 times correctly.
+
+
+We can check if the author ID and the name show us such duplicates. 
+
+```{r}
+p_id<-aggregate(paper_title~name+author_Id,r3,FUN="length")
+names(p_id)[3]<-"occurrence"
+```
+
+```{r}
+p_id<-p_id[order(p_id$occurrence,decreasing = T),]
+head(p_id)
+```
+This problem (at the moment) seems rather small. We will see how this looks like after increasing the homogeneity.
+```{r}
+p_id[p_id$name=="Thomas Zittel",]
+```
+
+## Manipulating a Merge-Variable
+
+One Problem that seems to occur often is that names are abbreviated.
+
+```{r}
+scholars$name[1:10]
+```
+To solve this, we could homogenize. Since we can't make up names, we have to throw away information and only use abbreviations. For this we create 2 merge-variables, one in each set.
+
+```{r}
+p$merge_name<-NA
+scholars$merge_name<-NA
+```
+
+Both need to be a function of the name. Here, we apply regular expressions now.
+
+
+```{r}
+nsplit<-strsplit(p$authors," ")
+
+```
+We create a list of lists which name components.
+
+
+```{r}
+nsplit[[1]]
+
+
+```
+We use a quick apply loop (more on that in Session 4).
+```{r}
+table(
+  unlist(
+    lapply(nsplit,length)
+    ))
+```
+We have mostly 2-element names, many 3-element names, and some with more than 4.
+
+Let us reduce this and only take the first element and the last.
+
+```{r}
+for(i in 1:length(nsplit)){
+    # new nsplit # a vector witht the first value and the last and concat them inversely by ,
+  nsplit[[i]]<-c(nsplit[[i]][length(nsplit[[i]])],nsplit[[i]][[1]])
+  
+}
+
+
+```
+
+
+We use a quick apply loop (more on that in Session 4).
+```{r}
+table(
+  unlist(
+    lapply(nsplit,length)
+    ))
+```
+All Elements are now length 2. We can now replace the second name with its first letter, using Regex.
+
+```{r}
+for(i in 1:length(nsplit)){
+  nsplit[[i]][[2]]<-substring(nsplit[[i]][[2]],1,1)
+}
+```
+
+```{r}
+for(i in 1:length(nsplit)){
+  nsplit[[i]][2]<-paste0(nsplit[[i]][2],".")
+  p$merge_name[i]<-paste0(nsplit[[i]],collapse=", ")
+}
+
+
+
+
+```
+```{r}
+p[grepl("Kefford",p$authors),]
+```
+And putting it into a function
+
+```{r}
+homogenize<-function(x,p){
+  
+  p$merge_name<-NA
+  
+  nsplit<-strsplit(p[,x]," ")
+
+  for(i in 1:length(nsplit)){
+    # new nsplit # a vector witht the first value and the last and concat them inversely by ,
+  nsplit[[i]]<-c(nsplit[[i]][length(nsplit[[i]])],nsplit[[i]][[1]])
+  
+  }
+  
+  for(i in 1:length(nsplit)){
+  nsplit[[i]][[2]]<-substring(nsplit[[i]][[2]],1,1)
+}
+  
+  for(i in 1:length(nsplit)){
+  nsplit[[i]][2]<-paste0(nsplit[[i]][2],".")
+  p$merge_name[i]<-paste0(nsplit[[i]],collapse=", ")
+}
+
+  return(p)
+}
+```
+
+```{r}
+
+p1<-homogenize("authors",p)
+
+s1<-homogenize("name",scholars)
+
+```
+
+We now should have a lot more hits!
+
+```{r}
+p2<-merge(p1,s1,by="merge_name")
+nrow(p2)
+```
+So...there are still about 15,000 we can't really explain, with a certain degree of 
+
+```{r}
+p_id<-aggregate(paper_title~name+author_Id,p2,FUN="length")
+names(p_id)[3]<-"occurrence"
+
+p_id<-p_id[order(p_id$occurrence,decreasing = T),]
+head(p_id)
+
+```
+Oof...now we have very different problems...
+
+
+## One-Sided Linking
+
+What can be expected to be in the other dataset, and what does not?
+How do you want to deal with Missing Values?
+
+This can be very useful to see which values matched and which didn't
+
+We will perform a "right-join", meaning we keep the left-hand data in full. In R you specify
+this as an argument in the merge function. 
+
+```{r}
+p2<-merge(p1,s1,by="merge_name",all.x=T)
+
+
+nrow(p2)
+```
+```{r}
+p2$unmatched<-is.na(p2$name)
+table(p2$unmatched)
+```
+There are only 695 of the 2900 authors remaining without a partner in the semantic scholar data, though...
+
+
+So what is the problem here? Let us checked how these values were matched using query.
+
+```{r}
+p3<-r2[r2$query %in% p2$authors[p2$unmatched],]
+
+
+```
+
+We see problems that relate to 
+
+special characters
+Capitalization
+
+
+
+## String Distance
+
+A further way to look at this problem is to zoom in on small (or large) differences in spelling. This is operationalized through a concept called string-distance. A string distance is how many character changed lie between two words. Marius and Mario has a string distance of 2. Mario and Luigi have 5 (they share an i).
+
+```{r}
+library(stringdist)
+stringdist("Marius","Mario")
+stringdist("Luigi","Mario")
+
+```
+We can apply this in two ways 1) we can see where the query went really wrong, and 2) to merge slighly differing names.
+
+
+``` {r}
+
+# we have some systematic problems with spanish names and need to eliminate names that
+pol2<-split(s1,s1$query)
+
+for(i in 1:length(pol2)){
+  if(nrow(pol2[[i]])>0){
+  pol2[[i]]$query<-names(pol2[i])
+  pol2[[i]]$sdist<-stringdist(unique(pol2[[i]]$query),pol2[[i]]$name)
+  }
+}
+
+pol3<-do.call(rbind,pol2)
+
+```
+Only now occurs that there are names in the data that are very very long:
+```{r}
+max(nchar(s1$name))
+```
+
+Since the data from semantic scholar is based on scanned pdfs, this is probably happening connected to the author ID process. But it also has siginificant problems with Latin American authors.
+
+```{r}
+pol3<-pol3[pol3$sdist<10,]
+```
+
+Addtionally to finding false positive matches, we can apply stringdistance also to avoid false negatives. Since many problems are caused by special characters, string distance can be used to avoid small differences in spelling. 
+```{r}
+library(fuzzyjoin)
+```
+
+```{r}
+p2f<-stringdist_join(p1,s1,by="merge_name",max_dist=1)
+
+```
+
+
+
+If we increase stringdist, a lot of things get matched we don't want.
+```{r}
+p2f<-stringdist_join(p1,s1,by="merge_name",max_dist=3)
+
+```
+
+
+
+
+
+
+## Adding information
+
+Beyond matching based on character similarity, there is the possibility to avoid false matches by adding information. For example, you can merge via multiple variables that help identifying individuals (like party or constituency in case of MPs), as long as all variables are present in both sets. We don't have this luxury here, but we know that the authors we are looking for are political scientists. We can use this information by using the field of work column we found yesterday and turned into a number of papers published in political science.
+
+
+```{r}
+pol3<-pol3[pol3$pol>0,]
+
+```
+
+Exercise: Use these strategies and combine them. Build something you consider a best merge.
+This final dataset now gets a unique ID for author.
+
+```{r}
+fin$unique_id<-paste0("id",1:nrow(fin))
+```
+
+
+## Building a relational Database
+
+Back to our database: since now we can JOIN, we can build a relational database from scratch. We start with our extremely simple example.
+
+
+```{r}
+df_ins<-data.frame(course_id=c(1,1,2), instructors = c("Johannes","Marius","Martijn"))
+
+df_course<-data.frame(course=c("data management","text as data"),students=c(6,10),present=c(3,NA))
+```
+
+First, we define the tables we are interested in. We add another feature of relational databases: keys. Keys are useful ways to achieve consistency in a database. They do not allow duplicates, so they make sure that every element is only joined once. They can also be used as indexes (tomorrow, in scaling things up) or can use auto-increments.
+
+
+```{r}
+dbExecute(mydb,"CREATE table courses(
+          course_id INTEGER PRIMARY KEY,
+          course_name varchar(30),
+          students INTEGER,
+          present INTEGER) ")
+
+dbExecute(mydb,"CREATE table instructors(
+          instructor_id INTEGER PRIMARY KEY,
+          instructor_name varchar(30),
+          course_id INTEGER)")
+
+
+```
+
+Now, we still have to adapt our data a bit.
+
+```{r}
+
+df_ins$instructor_id<-1:nrow(df_ins)
+df_course$course_id<-1:nrow(df_course)
+
+names(df_ins)[2]<-"instructor_name"
+names(df_ins)[1]<-"course_id"
+
+
+names(df_course)[1]<-"course_name"
+
+names(df_course)
+
+#dbExecute(mydb,"DROP table instructors;")
+#dbExecute(mydb,"DROP table courses;") in case sth goes wrong
+
+dbWriteTable(mydb,"instructors",df_ins,append=T,row.names=F)
+
+dbWriteTable(mydb,"courses",df_course,append=T,row.names=F)
+
+
+```
+
+## Join Operations 
+
+Now, we can apply JOINS like merges.
+
+JOIN == merge # combines data sets
+  INNER # only matches 
+  OUTER ## all=T
+  LEFT ## all.x=T
+  RIGHT ## all.y=T
+
+ON == BY 
+```{r}
+
+
+join1<-dbGetQuery(mydb,'SELECT * FROM courses
+INNER JOIN instructors ON courses.course_name = instructors.course_id;')
+
+
+```
+
+
+# EXERCISE
+
+Put your data structure your joining-result from scholars and ecpr in a dataset. Make your ID a primary key. Try to run a JOIN.
+
+
+
