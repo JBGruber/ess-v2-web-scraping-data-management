@@ -1,0 +1,705 @@
+---
+title: "Scaling  UP"
+author: "Marius Saeltzer"
+date: "23 7 2023"
+output: html_document
+---
+
+
+Text data to databases
+
+Mapping Script
+
+Literarur Grundlage research plan
+
+
+
+Session 4: Scaling Up
+
+a) Remote Database
+
+Setting up a remote database
+
+Connecting to a remote database
+
+Working with decentral Data
+
+
+
+b) Computational Considerations
+
+
+c) Building pipelines
+
+
+
+
+## Building a relational Database
+
+Back to our database: since now we can JOIN, we can build a relational database from scratch. We start with our extremely simple example.
+
+
+```{r}
+df_ins<-data.frame(course_id=c(1,1,2), instructors = c("Johannes","Marius","Martijn"))
+
+df_course<-data.frame(course=c("data management","text as data"),students=c(6,10),present=c(3,NA))
+```
+
+First, we define the tables we are interested in. We add another feature of relational databases: keys. Keys are useful ways to achieve consistency in a database. They do not allow duplicates, so they make sure that every element is only joined once. They can also be used as indexes (tomorrow, in scaling things up) or can use auto-increments.
+
+
+```{r}
+dbExecute(mydb,"CREATE table courses(
+          course_id INTEGER PRIMARY KEY,
+          course_name varchar(30),
+          students INTEGER,
+          present INTEGER) ")
+
+dbExecute(mydb,"CREATE table instructors(
+          instructor_id INTEGER PRIMARY KEY,
+          instructor_name varchar(30),
+          course_id INTEGER)")
+
+
+```
+
+Now, we still have to adapt our data a bit.
+
+```{r}
+
+df_ins$instructor_id<-1:nrow(df_ins)
+df_course$course_id<-1:nrow(df_course)
+
+names(df_ins)[2]<-"instructor_name"
+names(df_ins)[1]<-"course_id"
+
+
+names(df_course)[1]<-"course_name"
+
+names(df_course)
+
+#dbExecute(mydb,"DROP table instructors;")
+#dbExecute(mydb,"DROP table courses;") in case sth goes wrong
+
+dbWriteTable(mydb,"instructors",df_ins,append=T,row.names=F)
+
+dbWriteTable(mydb,"courses",df_course,append=T,row.names=F)
+
+
+```
+
+## Join Operations 
+
+Now, we can apply JOINS like merges.
+
+JOIN == merge # combines data sets
+  INNER # only matches 
+  OUTER ## all=T
+  LEFT ## all.x=T
+  RIGHT ## all.y=T
+
+ON == BY 
+```{r}
+
+
+join1<-dbGetQuery(mydb,'SELECT * FROM courses
+INNER JOIN instructors ON courses.course_name = instructors.course_id;')
+
+
+```
+
+
+# Exercise:
+
+Combine your skills: This dataset was scraped from the website. It is still in rough shape. Clean it
+
+```{r}
+
+ica<-readRDS("../data/ica_2023.rds")
+
+```
+
+
+1) Clean the time variable. Check for weird errors. Plot it across the day
+```{r}
+
+ica$paneltime<-as.POSIXlt(ica$time)
+```
+
+```{r}
+hist(ica$paneltime,breaks="hours")
+```
+
+2) Create an Institution Variable. Clean the Author names
+
+```{r}
+i<-1
+auth<-strsplit(ica$authors,",")
+ica$institution<-NA
+ica$name<-NA
+for(i in 1:nrow(ica)){
+  ica$institution[i]<-trimws(auth[[i]][2])
+  ica$name[i]<-trimws(auth[[i]][1])
+}
+
+```
+
+Create a list of institutions. Give them an ID with data on how many papers they sent to ICA.
+
+```{r}
+inst<-aggregate(name)
+
+```
+
+Create a list of all authors, with institutions. 
+
+3) Create a timetable of panels with the number of papers presented.
+
+```{r}
+
+a1<-aggregate(paper_title~panel_name+time,data=ica,FUN="length")
+```
+
+5) Put each of these tabels into your database. Answer the following questions:
+
+Which institution sent the most papers to ICA?
+Whis institution sent the most INDIVIDUALS to ICA?
+Which institution was, on average, earliest in the conference?
+
+
+# Scaling Up
+
+
+Data management is a very detail oriented task, at least in parts. The techniques and special characteristics we learned in session 1 to 3 give us some ways to control the chaos that will always emerge when data is collected, stored and combined. However all of this relates to data that is comparatively small-scale and lives on the computer of a single researcher. 
+
+Once the data gets big, grows dynamically or needs to be accessed by multiple collaborators we get into trouble. This is the second set of reasons why we use data bases: they work remotely, and they do so consistently, on machines that work contiunally. 
+
+This session will introduce workflows that will make it possible to manage large data projects.
+
+
+Issues: 
+
+Collaboration 
+
+  Building different front ends for the same data
+  
+  
+  
+  Continuity: Working on datasets that are continually growing (like in webscraping operations)
+  
+  Stability: 
+
+
+
+# Software you know
+
+The most effective way for collaborative development is GitHub, which you learned to work with in the first session, and worked with over and over again in the previous session. It is basically the first half of the dropbox directory you share with your colleauges. The second part relates, of course, to data. 
+
+
+XCKD meme
+
+Storing data is not a good idea for several reasons: they really don't like to host large files, and especially binary files don't work well in version control. Instead we will scale up our data base operation from the previous session.
+
+While we learned how to connect to databases stored at home (127.0.0.0) we can also connect to REMOTE databases. 
+
+## Servers 
+
+For this course, I set up a series of databases on an Amazon Web Service Cloud Server. Setting this up takes about 45 Minutes if you have never done this. 
+
+AWS is a very easy concept: You create an account and get a free contingent of about 50 pound/month. From here, you need to pay for it. In my opintion, 20 pound a month is enough for a full fledged web server to host your data.
+
+Alternatively, you can go to Microsoft Azure, or the IT of your university and ask them for a cloud instance. Both options are valid and work alike.
+
+
+### SSH
+
+To work with a server, you need two things: minimal linux/terminal/bash skills and a shh key. The fun thing is: once you installed git-bash on your computer you can control the server from your R terminal.
+
+Go to amazon web services, start an instance and go to key-pair. There, you can create a new keypair and download the file. Using 
+
+ssh -c "key.pem" IP-Adress
+
+your terminal now is the Server terminal. In other words, while you run the code from your laptop, it now runs in the cloud at some web server instance.
+
+You could now start a web scraping script, log-off and come back later, even after two weeks if the scraping takes a while.
+
+## SQL
+
+Or, you can install a SQL server. To do this, you just need to run the installation command, create a user and open the IP channel to the outside world.
+
+To do this:
+
+https://www.digitalocean.com/community/tutorials/how-to-install-mysql-on-ubuntu-20-04
+
+1. install MySQL Server
+
+sudo apt update
+sudo apt install mysql-server
+sudo systemctl start mysql.service
+sudo mysql
+
+in MySQL:
+
+
+
+
+2. Create root user
+3. Create users for every participants
+
+4. Allow IP Access from Outside
+    a) server level
+
+    sudo nano /etc/mysql/mysql.conf.d/mysqld.cnf
+    bind-address           = 0.0.0.0
+
+    sudo systemctl restart mysql
+
+    b) network group
+
+
+```{r}
+library(RMySQL)
+db_user <- 'Johannes'
+db_password <- 'seNNahoj53'
+db_name <- 'essex'
+db_host <- '16.171.198.48' # for local access
+db_port <- 3306
+
+# 3. Read data from db
+mydb <-  dbConnect(RMySQL::MySQL(), user = db_user, password = db_password,
+                 dbname = db_name, host = db_host, port = db_port)
+
+
+```
+
+## Remote Access to Databases
+
+As our course commences, our focus shifts from the combining of data structures to the uploading of data sets. As you all know, we will work with large datasets and will do so decentralized. This is particularly challenging in times of corona. 
+
+To answer this challenge, I will introduce the next feature that makes SQL databases so powerful: server based remote access. For this course I got a cloud based MYSQL database from google. 
+
+To access it, we will use the MYSQL package. It is just like SQLlite, but better suited for data transfer. 
+```{r}
+dbListTables(mydb)
+
+```
+
+In contrast to storing data locally, we will now add data to an SQL server. To do so, we have to authentificate. For now, I created a number of accounts for you. You can build a connection to the data base by adding three kinds of information: 
+
+  Host: the IP address of the Server
+  user: the name of the account, your uni abbreviation
+  password: preset now with your student number
+  port: Channel on your computer over which to communicate
+  name: Name of the database you like to access
+
+
+```{r}
+scholars<-readRDS("../data/scholars_flat.rds")
+
+dbWriteTable(mydb,"semantic",scholars)
+
+```
+
+
+```{r}
+count<-dbGetQuery(mydb, ' 
+           SELECT AVG(pol),name FROM semantic GROUP BY (name);')                
+
+```
+
+```{r}
+nom<-dbGetQuery(mydb, ' 
+           SELECT name FROM semantic;')               
+```
+
+### Exercise:
+
+Move your database you created for the ICA online. 
+
+
+
+# Computational Considerations
+
+When your pipeline works, it is time to deploy it. 
+
+There are three dimensions of making your work more efficient.
+
+R itself is not a very fast language and there have been packages that make use of c++ (dplyr, quanteda), indexing (data.table) and parallel computing. 
+
+Depending on the size of your data, writing for-loops, while being very readable, is not feasible anymore. The reason is that in contrast to Python or Julia, they are extremely inefficient. R in general is a very inefficient. 
+
+
+
+
+
+For-loops are, in theory, very slow. Instead, we use functional mapping. In tidy, you have the purrr... package, in base R you can use apply.
+
+
+We will mainly use the lapply loop, because it is the most generic and can handle 99 percent of problems.
+As you can see, it returns a list. This is very comfortable if you want to keep list objects the way they were, but to turn it into a vector, you still need to unlist them.
+
+
+
+Be careful that you only turn lists that look like vectors into vectors ;)
+
+
+Sadly, this will not work as easily for the place problem, as we can't tell the computer easily what to do with each individual object. So instead, we need to hide this little workaround elsewhere. The best and easiest way is to functionalize your code. Functions are not just things to learn by heart or import with packages, you can always write your own functions.
+
+
+## Benchmarking
+
+We measure performance by the time it takes to execute a command. Depending on the size of the data, this relly becomes an issue. 
+
+We benchmark performance by measuring time using the bench package or just system.time.
+```{r}
+library(bench)
+```
+
+
+Let's get back the annoying unnesting problem we had in session 2.
+
+```{r}
+scholars<-readRDS("../data/scholars.rds")
+```
+
+Johannes wrote us such a nice function. Let's butcher it
+```{r}
+library(tidyverse)
+scholar_unnest<-function(x){
+  if(nrow(x)>0){ # if data was retrieved for the query
+  out <- x %>%
+  unnest(papers) %>%
+  unnest_wider(papers) %>%
+  unnest(fieldsOfStudy)%>%
+  unnest(fieldsOfStudy)}else(out<-x) # else keep the named list
+return(out)}
+
+```
+We write an extremely ineffiecient function which does the job!
+
+```{r}
+sc2<-c()
+t1<-system.time(
+for(i in 1:length(scholars)){
+  if(nrow(scholars[[i]])>0){ # if data was retrieved for the query
+  out<-scholar_unnest(scholars[[i]])
+  sc2<-rbind(sc2,out)
+  }
+}
+)
+```
+
+
+Now, we use one component of the split-apply: the split. Instead of create an ever-growing dataframe, we create a list that stores it. This was the implementation we used in the original script.
+
+```{r}
+
+sc2<-list()
+
+t2<-system.time(
+for(i in 1:length(scholars)){
+  if(nrow(scholars[[i]])>0){ # if data was retrieved for the query
+  out<-scholar_unnest(scholars[[i]])
+  out$query<-names(scholars)[i]
+  sc2[[i]]<-out
+  }
+}
+)
+pol3<-do.call(rbind,sc2)
+
+```
+
+## Faster Computation: Mapping 
+
+We now put this function into an apply loop, which applies the function to all cases simultaneously.
+```{r}
+
+sc2<-list()
+
+t3<-system.time(sc2<-lapply(scholars,scholar_unnest))
+
+pol3<-do.call(rbind,sc2)
+
+
+```
+
+```{r}
+library(pbapply)
+
+t3<-system.time(sc2<-pblapply(scholars,scholar_unnest))
+
+```
+
+### purrr
+
+Purrr is basically the tidyverse solution, but it actually works quite similar to the other mapping functions. 
+
+```{r}
+library(purrr)
+t4<-system.time(sc2<-map(scholars,scholar_unnest))
+
+
+```
+
+
+### Parallel Computing
+
+Purrr is basically the tidyverse solution, but it actually works quite similar to the other mapping functions. 
+
+
+```{r}
+library(furrr)
+library(future)
+
+plan(multisession,workers=2)
+
+t5<-system.time(sc2<-furrr::future_map(scholars,scholar_unnest))
+
+
+plan(multisession,workers=6)
+
+t6<-system.time(sc2<-furrr::future_map(scholars,scholar_unnest))
+
+plan(multisession,workers=10)
+
+t7<-system.time(sc2<-furrr::future_map(scholars,scholar_unnest))
+
+
+```
+
+
+### dplyr or data.table
+
+If you work with big data sets, even well-defined standard operations you can't really improve take time and computational power. There are two 2 frameworks in R dplyr and data.table. 
+
+Both are very powerful, but rather complicated new ways of thinking in R. Since you use dplyr all the time in tidy, I will briefly introduce data.table.
+
+First, we look at a large data set: we duplicate out our already large 600,000 obs to over 3.8 Million.
+
+```{r}
+pol4<-pol3
+pol3<-rbind(pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4)
+
+
+```
+We can now do a subsetting operation.
+```{r}
+
+system.time(pol<-d1[fieldsOfStudy=="Political Science"])
+
+
+
+bench::mark(pol<-pol3[pol3$fieldsOfStudy=="Political Science",],iterations = 50)
+
+
+```
+
+### Data.table 
+
+Data. table has an extremely efficient file storing format. Allows indexing like databases (see below).
+
+Memory Efficiency: data.table is designed to handle large datasets efficiently. It uses a memory-mapped file approach, which reduces memory overhead and allows for faster operations, especially when working with big data.
+
+Reference Semantics: In data.table, operations are performed by reference rather than creating copies of data. This means that many operations are done in-place, avoiding unnecessary memory allocation and copy operations, leading to faster execution.
+
+Optimized Algorithms: data.table has its own optimized implementations of various data manipulation tasks, such as joins, aggregations, and sorting. These algorithms are often more efficient and can take advantage of multiple cores and vectorized operations.
+
+Function Overhead Reduction: The data.table package minimizes function call overhead, which can be significant when dealing with large datasets and repetitive operations.
+
+Parallel Processing: In some cases, data.table can automatically take advantage of parallel processing, making use of multiple cores, which further boosts performance for certain tasks.
+
+```{r}
+library(data.table)
+
+d1<-data.table(pol3)
+
+system.time(pol<-d1[fieldsOfStudy=="Political Science"])
+
+bench::mark(pol<-d1[fieldsOfStudy=="Political Science"],iterations = 50)
+
+```
+
+
+
+```{r}
+
+b2<-bench::mark(pol<-d1[fieldsOfStudy=="Political Science"],iterations = 50)
+```
+
+https://images.datacamp.com/image/upload/v1653830846/Marketing/Blog/data_table_cheat_sheet.pdf
+
+
+
+
+
+
+## Indexing
+
+
+A primary key is a concept in the context of databases and data management. It is a unique identifier for each record (row) in a database table. The primary key serves as a means to uniquely distinguish each row from one another, and it ensures that no two rows in the table can have the same key value.
+
+Here are some key characteristics of a primary key:
+
+Uniqueness: Every value in the primary key column must be unique, meaning no two rows in the table can have the same key value.
+
+Non-null: A primary key value cannot be NULL or empty. Each row must have a valid key value.
+
+Stability: Ideally, the primary key should be immutable or rarely changed, as it is used to link and reference data across different tables and relationships.
+
+Single value: A primary key typically consists of a single column in the table. However, in some cases, a composite primary key can be used, which is a combination of two or more columns to uniquely identify a row.
+
+Indexed: Primary keys are often automatically indexed by the database management system to optimize query performance.
+
+The primary key plays a crucial role in ensuring data integrity and is used as a reference for relationships between different tables in a relational database. Foreign keys in other tables can reference the primary key in this table to establish relationships, enforce data integrity, and maintain consistency within the database.
+
+```{r}
+#dbExecute(mydb,"drop table authorship;")
+pol3<-pol4
+```
+
+
+We aggregate on the Author Level...
+```{r}
+pol3$paperId
+
+unique_authors<-aggregate(paperId~author_Id+name,pol3,FUN="length")
+
+unique_authors$id<-1:nrow(unique_authors)
+```
+
+As well on the paperlevel.
+```{r}
+
+unique_papers<-aggregate(author_Id~paperId,pol3,FUN="length")
+
+unique_papers$id<-1:nrow(unique_papers)
+```
+
+
+```{r}
+authorship<-pol3[,c("author_Id","paperId")]
+```
+
+```{r}
+names(authorship)[1]<-"authorID"
+
+dbExecute(mydb,"CREATE table authorship(
+          authorID INT PRIMARY KEY,
+          paperId int);")
+
+```
+
+```{r}
+dbWriteTable(mydb,"authorship",authorship,append=T,row.names=F)
+```
+
+```{r}
+dbExecute(mydb,"CREATE table allauthors(
+          authorID INT PRIMARY KEY,
+          name varchar(30),
+          query varchar(30),
+          pol int,
+          total int);")
+```
+
+```{r}
+names(unique_authors)[1]<-"authorID"
+dbWriteTable(mydb,"allauthors",unique_authors,append=T,row.names=F)
+
+```
+
+```{r}
+dbExecute(mydb,"CREATE table authorships(
+          authorID INT PRIMARY KEY,
+          name varchar(30),
+          query varchar(30),
+          pol int,
+          total int);")
+
+
+dbWriteTable(mydb,"allauthors",unique_authors,append=T,row.names=F)
+
+```
+
+
+We can join the data without specifing which variable with much higher speed than regularly (it just takes a while to send the data here from the cloud).
+
+```{r}
+join1<-dbGetQuery(mydb,'SELECT * FROM authorship
+INNER JOIN allauthors;')
+```
+
+
+
+# 1. Research Plan
+
+Based on your research question, define what data you need in what form
+
+
+   a) Level of Analysis
+   
+   b) Planned Analysis Method
+   
+        a) Multi-Level?
+        
+        b) Time Series Analysis
+        
+    
+
+    b) Data
+    
+      a) Find out where your data is stored
+      
+      b) Test feasibility of data extraction
+      
+      c) Define Constraints 
+      
+        
+
+2. Preparation
+
+  a) Build a data base
+  
+  b) Exectute your analysis plan with mock data
+  
+  c) Preregistration
+  
+  
+3. Execution
+
+  a) Data Collection
+  
+  b) Data Wrangling
+  
+  c) Data Analysis
+  
+  
+4. Documentation
+
+  a) Refactor your code
+  
+  b) Build documentation
+  
+  c) Put your code in a Github Repository
+  
+       
+Core Question: 
+
+* How many data sources do you need to combine?
+* What is the dimensionality of your data?
+* Do you have collaborators?
+
+
+
+ 
+# Exercise
+
+Write mock documentation of your
+
+directory 
+
+database 
+
+Tomorrow: Present this!
+
+
