@@ -40,6 +40,30 @@ Back to our database: since now we can JOIN, we can build a relational database 
 
 
 ```{r}
+library(RMySQL)
+db_user <- 'Student'
+db_password <- 'password'
+db_name <- 'essex'
+db_host <- 'localhost' # for local access
+db_port <- 3306
+
+# Connect to database
+mydb <-  dbConnect(RMySQL::MySQL(), user = db_user, password = db_password,
+                 dbname = db_name, host = db_host, port = db_port)
+
+
+compile<-F
+if(compile==T){
+dbExecute(mydb,"drop table ecpr_authors;")
+dbExecute(mydb,"drop table ecpr_authors2;")
+dbExecute(mydb,"drop table semantic;")
+dbExecute(mydb,"drop table courses;")
+dbExecute(mydb,"drop table instructors;")
+}
+```
+
+
+```{r}
 df_ins<-data.frame(course_id=c(1,1,2), instructors = c("Johannes","Marius","Martijn"))
 
 df_course<-data.frame(course=c("data management","text as data"),students=c(6,10),present=c(3,NA))
@@ -496,17 +520,8 @@ bench::mark(pol<-pol3[pol3$fieldsOfStudy=="Political Science",],iterations = 50)
 
 ### Data.table 
 
-Data. table has an extremely efficient file storing format. Allows indexing like databases (see below).
+Data.table has an extremely efficient file storing format. It allows indexing like databases (see below).
 
-Memory Efficiency: data.table is designed to handle large datasets efficiently. It uses a memory-mapped file approach, which reduces memory overhead and allows for faster operations, especially when working with big data.
-
-Reference Semantics: In data.table, operations are performed by reference rather than creating copies of data. This means that many operations are done in-place, avoiding unnecessary memory allocation and copy operations, leading to faster execution.
-
-Optimized Algorithms: data.table has its own optimized implementations of various data manipulation tasks, such as joins, aggregations, and sorting. These algorithms are often more efficient and can take advantage of multiple cores and vectorized operations.
-
-Function Overhead Reduction: The data.table package minimizes function call overhead, which can be significant when dealing with large datasets and repetitive operations.
-
-Parallel Processing: In some cases, data.table can automatically take advantage of parallel processing, making use of multiple cores, which further boosts performance for certain tasks.
 
 ```{r}
 library(data.table)
@@ -526,11 +541,9 @@ bench::mark(pol<-d1[fieldsOfStudy=="Political Science"],iterations = 50)
 b2<-bench::mark(pol<-d1[fieldsOfStudy=="Political Science"],iterations = 50)
 ```
 
+
+
 https://images.datacamp.com/image/upload/v1653830846/Marketing/Blog/data_table_cheat_sheet.pdf
-
-
-
-
 
 
 ## Indexing
