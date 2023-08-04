@@ -72,6 +72,12 @@ mydb <-  dbConnect(RMySQL::MySQL(), user = db_user, password = db_password,
                    dbname = db_name, host = db_host, port = db_port)
 
 
+get_text<-function(p1){
+  h1<-html_node(p1,"body > p > font")
+  text<-html_text(h1)
+  return(text)}
+
+
 get_meta<-function(p1){
   h1<-html_node(p1,"body > table") # extract the table
   t1<-rvest::html_table(h1) #
