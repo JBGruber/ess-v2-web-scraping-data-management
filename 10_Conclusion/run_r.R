@@ -64,7 +64,7 @@ search_speeches_page <- function(txOrador = "abelardo",
 db_user <- 'Johannes'
 db_password <- 'seNNahoj53'
 db_name <- 'db_koichi'
-db_host <- '16.171.198.48' # for local access
+db_host <- 'localhost' # for local access
 db_port <- 3306
 
 # 3. Read data from db
@@ -101,6 +101,11 @@ get_meta<-function(p1){
   party<-name}
   return(data.frame(fullname,party,session,date,hour,fase))
 }
+
+
+main<-dbGetQuery(mydb,"select * from mpsbrazil;")
+
+main<-aggregate(year~party+orador,main,FUN="length")
 
 mps<-main$orador[5:nrow(main),]
 
