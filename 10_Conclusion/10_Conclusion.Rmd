@@ -1,0 +1,476 @@
+---
+title: "Conlusion"
+author: "Marius Saeltzer"
+date: "2023-08-04"
+output: html_document
+---
+
+
+```{r}
+
+install.packages("httr2")
+install.packages("rvest")
+install.packages("stringr")
+
+
+
+library(httr2)
+library(rvest)
+library(stringr)
+
+check_in_browser <- function(html) {
+  tmp <- tempfile(fileext = ".html")
+  writeLines(as.character(html), tmp)
+  browseURL(tmp)
+}
+
+# Request a single page and scrape all the links
+search_speeches_page <- function(txOrador = "abelardo",
+                                 txPartido = NULL,
+                                 txUF = NULL,
+                                 dtInicio = NULL,
+                                 dtFim = NULL,
+                                 txTexto = NULL,
+                                 txSumario = NULL,
+                                 basePesq = "plenario",
+                                 CampoOrdenacao = "dtSessao",
+                                 PageSize = 50,
+                                 page = 1L) {
+
+  message("Getting page ", page)
+  search_res <- request("https://www.camara.leg.br/internet/sitaqweb/resultadoPesquisaDiscursos.asp?") |>
+    req_url_query(
+      CurrentPage = page,
+      txOrador = txOrador,
+      txPartido = txPartido,
+      txUF = txUF,
+      dtInicio = dtInicio,
+      dtFim = dtFim,
+      txTexto = txTexto,
+      txSumario = txSumario,
+      basePesq = basePesq,
+      CampoOrdenacao = CampoOrdenacao,
+      PageSize = PageSize, #
+      TipoOrdenacao = "DESC",
+      btnPesq = "Pesquisar"
+    ) |>
+    req_perform() |>
+    resp_body_html()
+
+  links <- search_res |>
+    html_elements("a") |>
+    html_attr("href")
+
+  link_titles <-  search_res |>
+    html_elements("a") |>
+    html_attr("title")
+
+  links_speeches <- links[link_titles == "Íntegra do Discurso" & !is.na(link_titles)] |>
+    str_remove_all("\\s")
+
+  if (length(links_speeches) > 0) {
+    links_speeches_full <- paste0("https://www.camara.leg.br/internet/sitaqweb/", links_speeches)
+    return(links_speeches_full)
+  } else {
+    return("no results")
+  }
+}
+
+
+# Loop through pages until nothing else is found
+
+
+
+# Alternative 2: increase page size
+search_speeches_page("abelardo", PageSize = 5000)
+
+```
+
+
+
+
+
+
+
+# Computational Considerations
+
+When your pipeline works, it is time to deploy it. 
+
+There are three dimensions of making your work more efficient.
+
+R itself is not a very fast language and there have been packages that make use of c++ (dplyr, quanteda), indexing (data.table) and parallel computing. 
+
+Depending on the size of your data, writing for-loops, while being very readable, is not feasible anymore. The reason is that in contrast to Python or Julia, they are extremely inefficient. R in general is a very inefficient. 
+
+
+
+
+
+For-loops are, in theory, very slow. Instead, we use functional mapping. In tidy, you have the purrr... package, in base R you can use apply.
+
+
+We will mainly use the lapply loop, because it is the most generic and can handle 99 percent of problems.
+As you can see, it returns a list. This is very comfortable if you want to keep list objects the way they were, but to turn it into a vector, you still need to unlist them.
+
+
+
+Be careful that you only turn lists that look like vectors into vectors ;)
+
+
+Sadly, this will not work as easily for the place problem, as we can't tell the computer easily what to do with each individual object. So instead, we need to hide this little workaround elsewhere. The best and easiest way is to functionalize your code. Functions are not just things to learn by heart or import with packages, you can always write your own functions.
+
+
+## Benchmarking
+
+We measure performance by the time it takes to execute a command. Depending on the size of the data, this relly becomes an issue. 
+
+We benchmark performance by measuring time using the bench package or just system.time.
+```{r}
+library(bench)
+```
+
+
+Let's get back the annoying unnesting problem we had in session 2.
+
+```{r}
+scholars<-readRDS("../data/scholars.rds")
+```
+
+Johannes wrote us such a nice function. Let's butcher it
+```{r}
+library(tidyverse)
+scholar_unnest<-function(x){
+  if(nrow(x)>0){ # if data was retrieved for the query
+  out <- x %>%
+  unnest(papers) %>%
+  unnest_wider(papers) %>%
+  unnest(fieldsOfStudy)%>%
+  unnest(fieldsOfStudy)}else(out<-x) # else keep the named list
+return(out)}
+
+```
+We write an extremely ineffiecient function which does the job!
+
+```{r}
+sc2<-c()
+t1<-system.time(
+for(i in 1:length(scholars)){
+  if(nrow(scholars[[i]])>0){ # if data was retrieved for the query
+  out<-scholar_unnest(scholars[[i]])
+  sc2<-rbind(sc2,out)
+  }
+}
+)
+```
+
+
+Now, we use one component of the split-apply: the split. Instead of create an ever-growing dataframe, we create a list that stores it. This was the implementation we used in the original script.
+
+```{r}
+
+sc2<-list()
+
+t2<-system.time(
+for(i in 1:length(scholars)){
+  if(nrow(scholars[[i]])>0){ # if data was retrieved for the query
+  out<-scholar_unnest(scholars[[i]])
+  out$query<-names(scholars)[i]
+  sc2[[i]]<-out
+  }
+}
+)
+pol3<-do.call(rbind,sc2)
+
+```
+
+## Faster Computation: Mapping 
+
+We now put this function into an apply loop, which applies the function to all cases simultaneously.
+```{r}
+
+sc2<-list()
+
+t3<-system.time(sc2<-lapply(scholars,scholar_unnest))
+
+pol3<-do.call(rbind,sc2)
+
+
+```
+
+```{r}
+library(pbapply)
+
+t3<-system.time(sc2<-pblapply(scholars,scholar_unnest))
+
+```
+
+### purrr
+
+Purrr is basically the tidyverse solution, but it actually works quite similar to the other mapping functions. 
+
+```{r}
+library(purrr)
+t4<-system.time(sc2<-map(scholars,scholar_unnest))
+
+
+```
+
+
+### Parallel Computing
+
+Purrr is basically the tidyverse solution, but it actually works quite similar to the other mapping functions. 
+
+
+```{r}
+library(furrr)
+library(future)
+
+plan(multisession,workers=2)
+
+t5<-system.time(sc2<-furrr::future_map(scholars,scholar_unnest))
+
+
+plan(multisession,workers=6)
+
+t6<-system.time(sc2<-furrr::future_map(scholars,scholar_unnest))
+
+plan(multisession,workers=10)
+
+t7<-system.time(sc2<-furrr::future_map(scholars,scholar_unnest))
+
+
+```
+
+
+### dplyr or data.table
+
+If you work with big data sets, even well-defined standard operations you can't really improve take time and computational power. There are two 2 frameworks in R dplyr and data.table. 
+
+Both are very powerful, but rather complicated new ways of thinking in R. Since you use dplyr all the time in tidy, I will briefly introduce data.table.
+
+First, we look at a large data set: we duplicate out our already large 600,000 obs to over 3.8 Million.
+
+```{r}
+pol4<-pol3
+pol3<-rbind(pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4,pol4)
+
+
+```
+We can now do a subsetting operation.
+```{r}
+
+system.time(pol<-d1[fieldsOfStudy=="Political Science"])
+
+
+
+bench::mark(pol<-pol3[pol3$fieldsOfStudy=="Political Science",],iterations = 50)
+
+
+```
+
+### Data.table 
+
+Data.table has an extremely efficient file storing format. It allows indexing like databases (see below).
+
+
+```{r}
+library(data.table)
+
+d1<-data.table(pol3)
+
+system.time(pol<-d1[fieldsOfStudy=="Political Science"])
+
+bench::mark(pol<-d1[fieldsOfStudy=="Political Science"],iterations = 50)
+
+```
+
+
+
+```{r}
+
+b2<-bench::mark(pol<-d1[fieldsOfStudy=="Political Science"],iterations = 50)
+```
+
+
+
+https://images.datacamp.com/image/upload/v1653830846/Marketing/Blog/data_table_cheat_sheet.pdf
+
+
+## Indexing
+
+
+A primary key is a concept in the context of databases and data management. It is a unique identifier for each record (row) in a database table. The primary key serves as a means to uniquely distinguish each row from one another, and it ensures that no two rows in the table can have the same key value.
+
+Here are some key characteristics of a primary key:
+
+Uniqueness: Every value in the primary key column must be unique, meaning no two rows in the table can have the same key value.
+
+Non-null: A primary key value cannot be NULL or empty. Each row must have a valid key value.
+
+Stability: Ideally, the primary key should be immutable or rarely changed, as it is used to link and reference data across different tables and relationships.
+
+Single value: A primary key typically consists of a single column in the table. However, in some cases, a composite primary key can be used, which is a combination of two or more columns to uniquely identify a row.
+
+Indexed: Primary keys are often automatically indexed by the database management system to optimize query performance.
+
+The primary key plays a crucial role in ensuring data integrity and is used as a reference for relationships between different tables in a relational database. Foreign keys in other tables can reference the primary key in this table to establish relationships, enforce data integrity, and maintain consistency within the database.
+
+```{r}
+#dbExecute(mydb,"drop table authorship;")
+pol3<-pol4
+```
+
+
+We aggregate on the Author Level...
+```{r}
+pol3$paperId
+
+unique_authors<-aggregate(paperId~author_Id+name,pol3,FUN="length")
+
+unique_authors$id<-1:nrow(unique_authors)
+```
+
+As well on the paperlevel.
+```{r}
+
+unique_papers<-aggregate(author_Id~paperId,pol3,FUN="length")
+
+unique_papers$id<-1:nrow(unique_papers)
+```
+
+
+```{r}
+authorship<-pol3[,c("author_Id","paperId")]
+```
+
+```{r}
+names(authorship)[1]<-"authorID"
+
+dbExecute(mydb,"CREATE table authorship(
+          authorID INT PRIMARY KEY,
+          paperId int);")
+
+```
+
+```{r}
+              # table name in SQL  data.frame you want send
+dbWriteTable(mydb,"authorship",authorship[1:10,],overwrite=T,row.names=F)
+
+names(authorship)
+dbExecute(mydb,"Alter table authorship cast authorID varchar(30);")
+
+dbExecute(mydb,"Alter table authorship add primary key (authorID);")
+
+
+```
+
+```{r}
+dbExecute(mydb,"CREATE table allauthors(
+          authorID INT PRIMARY KEY,
+          name varchar(30),
+          query varchar(30),
+          pol int,
+          total int);")
+```
+
+```{r}
+names(unique_authors)[1]<-"authorID"
+dbWriteTable(mydb,"allauthors",unique_authors,append=T,row.names=F)
+
+```
+
+```{r}
+dbExecute(mydb,"CREATE table authorships(
+          authorID INT PRIMARY KEY,
+          name varchar(30),
+          query varchar(30),
+          pol int,
+          total int);")
+
+
+dbWriteTable(mydb,"allauthors",unique_authors,append=T,row.names=F)
+
+```
+
+
+We can join the data without specifing which variable with much higher speed than regularly (it just takes a while to send the data here from the cloud).
+
+```{r}
+join1<-dbGetQuery(mydb,'SELECT * FROM authorship
+INNER JOIN allauthors;')
+```
+
+
+
+# 1. Research Plan
+
+Based on your research question, define what data you need in what form
+
+
+   a) Level of Analysis
+   
+   b) Planned Analysis Method
+   
+        a) Multi-Level?
+        
+        b) Time Series Analysis
+        
+    
+
+    b) Data
+    
+      a) Find out where your data is stored
+      
+      b) Test feasibility of data extraction
+      
+      c) Define Constraints 
+      
+        
+
+2. Preparation
+
+  a) Build a data base
+  
+  b) Exectute your analysis plan with mock data
+  
+  c) Preregistration
+  
+  
+3. Execution
+
+  a) Data Collection
+  
+  b) Data Wrangling
+  
+  c) Data Analysis
+  
+  
+4. Documentation
+
+  a) Refactor your code
+  
+  b) Build documentation
+  
+  c) Put your code in a Github Repository
+  
+       
+Core Question: 
+
+* How many data sources do you need to combine?
+* What is the dimensionality of your data?
+* Do you have collaborators?
+
+
+
+ 
+# Exercise
+
+Write mock documentation of your
+
+directory 
+
+database 
+
+Tomorrow: Present this!
+
+
