@@ -107,7 +107,7 @@ main<-dbGetQuery(mydb,"select * from mpsbrazil;")
 
 main<-aggregate(year~party+orador,main,FUN="length")
 
-mps<-main$orador[5:nrow(main),]
+mps<-main$orador[5:nrow(main)]
 
 for(m in 1:length(mps)){
 
