@@ -1,0 +1,23 @@
+/* CSS file */
+
+.headline {
+  color: red;
+}
+
+.author {
+  color: grey;
+  font-style: italic;
+  font-weight: bold;
+}
+
+.top-row {
+  background-color: lightgrey;
+}
+
+.content img {
+  border: 2px solid black;
+}
+
+table, th, td {
+  border: 1px solid black;
+}

@@ -26,66 +26,12 @@ This is the course material for the Essex Summer School in Social Science Data A
 | Day 10      | Building a Reproducible Research Project |
 
 
-# Course Plan
-
-## Day 1 Introduction
-
-In this session, you learn how to use the tools of the hunt.
-
-## Day 2 Basic Data Structures
-
-In this session, we learn the basics of relational databases.
-
-## Day 3 Importing and Wrangling Data
-
-In this session, we learn to tame data.
-
-Your task: Turn your webpage into data.
-
-## Day 4 Linking and joining data & SQL
-
-In this session, we learn how to mate and crossbreed data.
-
-Your task: Link your data to our database.
-
-## Day 5 Scaling, Reporting and Database Software
-
-In this session, we learn how to bring data to the data fair.
-
-## Day 6 Introduction to the Web
-
-In this session, we learn how to scout data in the wild. For this, we need to understand the rules of the outdoors.
-
-Your task: Hand in your research abstract
-
-## Day 7 Static Web Pages
-
-In this session, we trap some docile data that wants to be found.
-
-Your task: Find a conference that uses a static website and scrape the data as we have done in class (note: if you find non-static pages, also note them, we can have a look at them later)
-
-## Day 8 Application Programming Interface (APIs)
-
-In this session, we learn how to obtain data from someone else.
-
-Your task: Find and parse information about the authors you found on the conference website youscraped before
-
-## Day 9 Interactive Web Pages
-
-In this session, we learn how to hunt down wild data.
-
-Your task: Find a conference that uses a dynamic website and scrape the data as we have done in class
-
-## Day 10 Designing and Building a reproducible Research Project
-
-In this session, we learn how to promote our hunting strategies to the public.
-
 # Required software
 
 You should have several software applications installed before the start of the course:
 
 - [R](https://cran.r-project.org/)
-- An IDE, prferably [RStudio Desktop](https://posit.co/download/rstudio-desktop/), but you can also use [VSCodium](https://vscodium.com/) or [VSCodium](https://code.visualstudio.com/download) or [Positron](https://github.com/posit-dev/positron)
+- An IDE, preferably [RStudio Desktop](https://posit.co/download/rstudio-desktop/), but you can also use [VSCodium](https://vscodium.com/) or [VSCodium](https://code.visualstudio.com/download) or [Positron](https://github.com/posit-dev/positron)
 - [Quarto](https://quarto.org/docs/get-started/)
 
 The course uses the base pipe character (`|>`) which is only available in `R` version 4.1.0+.

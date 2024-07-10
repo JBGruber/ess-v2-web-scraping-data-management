@@ -1,0 +1,19 @@
+---
+title: "Introduction to Web Scraping and Data Management for Social Scientists"
+subtitle: "Session 4:	Linking and joining data & SQL"
+author: "Johannes B. Gruber"
+date: 2024-07-25
+format:
+  revealjs:
+    smaller: true
+    scrollable: true
+    code-line-numbers: true
+    slide-number: c/t
+    logo: https://essexsummerschool.com/wp-content/uploads/2016/03/essex_logo-mobile.svg
+    self-contained: true
+execute:
+  cache: true
+  echo: true
+highlight-style: pygments
+---
+

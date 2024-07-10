@@ -1,0 +1,1016 @@
+---
+title: "Introduction to Web Scraping and Data Management for Social Scientists"
+subtitle: "Session 7: Scraping Static Web Pages"
+author: "Johannes B. Gruber"
+date: 2024-07-30
+format:
+  revealjs:
+    smaller: true
+    scrollable: true
+    code-line-numbers: true
+    slide-number: c/t
+    logo: https://essexsummerschool.com/wp-content/uploads/2016/03/essex_logo-mobile.svg
+    self-contained: true
+execute:
+  cache: true
+  echo: true
+highlight-style: pygments
+bibliography: ../references.bib
+---
+
+# Introduction
+## The Plan for Today
+
+:::: {.columns}
+
+::: {.column width="60%"}
+In this session, we trap some **docile data** that wants to be found.
+We will:
+
+- Go over some parsing examples:
+  - Wikipedia: World World Happiness Report
+- Discuss some examples of good approaches to data wrangling
+- Go into a bit more detail on requesting raw data
+  
+![Original Image Source: prowebscraper.com](media/web_scraping_steps.png)
+:::
+
+::: {.column width="40%" }
+![](https://images.unsplash.com/photo-1534361960057-19889db9621e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1740&q=80)
+[Joe Caione](https://unsplash.com/@joeyc) via unsplash.com
+:::
+
+::::
+
+
+```{css}
+#| echo: false
+
+.datatables {
+  font-size: smaller;
+}
+
+```
+
+# Example: World Happiness Report
+## Use your Browser to Scout
+
+:::: {.columns}
+
+::: {.column width="45%"}
+[
+  ![](media/en.wikipedia.org_wiki_World_Happiness_Report.png)
+](https://en.wikipedia.org/wiki/World_Happiness_Report)
+![](media/en.wikipedia.org_wiki_World_Happiness_Report_table.png)
+:::
+
+::: {.column width="50%" }
+![](media/en.wikipedia.org_wiki_World_Happiness_Report_code.png)
+:::
+
+::::
+
+## Use your Browser's `Inspect` tool
+
+![](media/inspect-view.png)
+
+*Note: Might not be available on all browsers; use Chromium-based or Firefox.*
+
+## Use `rvest` to scrape
+
+:::: {.columns}
+
+::: {.column width="45%"}
+```{r}
+library(rvest)
+library(tidyverse)
+
+# 1. Request & collect raw html
+html <- read_html("https://en.wikipedia.org/wiki/World_Happiness_Report")
+
+# 2. Parse
+happy_table <- html |> 
+  html_elements(".wikitable") |> # select the right element
+  html_table() |>                # special function for tables
+  pluck(3)                       # select the third table
+
+# 3. No wrangling necessary
+happy_table
+```
+:::
+
+::: {.column width="50%" }
+```{r}
+## Plot relationship wealth and life expectancy
+ggplot(happy_table, aes(x = `GDP per capita`, y = `Healthy life expectancy`)) + 
+  geom_point() + 
+  geom_smooth(method = 'lm')
+```
+
+:::
+::::
+
+## Exercises 1
+
+1. Get the table with 2023 opinion polling for the next United Kingdom general election from <https://en.wikipedia.org/wiki/Opinion_polling_for_the_next_United_Kingdom_general_election>
+2. Wrangle and plot the data opinion polls
+
+# Example: UK prime ministers on Wikipedia
+## Use your Browser to Scout
+
+[
+  ![](media/list-pms.png)
+](https://en.wikipedia.org/w/index.php?title=List_of_prime_ministers_of_the_United_Kingdom&oldid=1166167337)
+
+## Use `rvest` to scrape
+
+:::: {.columns}
+
+::: {.column width="45%"}
+```{r}
+# 1. Request & collect raw html
+html <- read_html("https://en.wikipedia.org/w/index.php?title=List_of_prime_ministers_of_the_United_Kingdom&oldid=1166167337") # I'm using an older version of the site since some just changed it
+
+# 2. Parse
+pm_table <- html |> 
+  html_element(".wikitable:contains('List of prime ministers')") |>
+  html_table() |> 
+  as_tibble(.name_repair = "unique") |> 
+  filter(!duplicated(`Prime ministerOffice(Lifespan)`))
+
+# 3. No wrangling necessary
+pm_table
+```
+:::
+
+::: {.column width="50%" }
+
+```{html}
+#| eval: false
+<td rowspan="4">
+  <span class="anchor" id="18th_century"></span>
+   <b>
+     <a href="/wiki/Robert_Walpole" title="Robert Walpole">Robert Walpole</a>
+   </b>
+   <sup id="cite_ref-FOOTNOTEEccleshallWalker20021,_5EnglefieldSeatonWhite19951–5PrydeGreenwayPorterRoy199645–46_28-0" class="reference">
+     <a href="#cite_note-FOOTNOTEEccleshallWalker20021,_5EnglefieldSeatonWhite19951–5PrydeGreenwayPorterRoy199645–46-28">[27]</a>
+   </sup>
+   <br>
+   <span style="font-size:85%;">MP for <a href="/wiki/King%27s_Lynn_(UK_Parliament_constituency)" title="King's Lynn (UK Parliament constituency)">King's Lynn</a>
+   <br>(1676–1745)
+  </span>
+</td>
+```
+
+```{r}
+links <- html |> 
+  html_elements(".wikitable:contains('List of prime ministers') b a") |>
+  html_attr("href")
+title <- html |> 
+  html_elements(".wikitable:contains('List of prime ministers') b a") |>
+  html_text()
+tibble(name = title, link = links)
+```
+
+Note: these are relative links that need to be combined with *https://en.wikipedia.org/* to work
+:::
+::::
+
+
+## Exercises 2
+
+1. For extracting text, `rvest` has two functions: `html_text` and `html_text2`. Explain the difference. You can test your explanation with the example html below.
+
+```{r}
+html <- "<p>This is some text
+         some more text</p><p>A new paragraph!</p>
+         <p>Quick Question, is web scraping:
+
+         a) fun
+         b) tedious
+         c) I'm not sure yet!</p>" |> 
+  read_html()
+```
+
+2. How could you convert the `links` objects so that it contains actual URLs?
+3. How could you add the links we extracted above to the `pm_table` to keep everything together?
+
+# Example: IC2S2 2023
+## What do we want
+
+
+:::: {.columns}
+
+::: {.column width="45%"}
+- General goal in the course: we want to build a database of conference attendance and link this to researchers
+- So for each website:
+  - Speakers
+  - (Co-)authors
+  - Paper/talk titles
+  - Panel (to see who was in the same ones)
+- In the next session we will also collect some researcher data
+:::
+
+::: {.column width="50%" }
+[
+  ![](media/ic2s2.png)
+](https://www.ic2s2.org/program.html)
+:::
+
+::::
+
+## Let's scrape! Exercise
+
+I started the code below, now it's your turn to finish it:
+
+```{r}
+#| eval: false
+# 1. Request & collect raw html
+html <- read_html("https://www.ic2s2.org/program.html")
+
+sessions <- html |> 
+  html_elements(".nav_list")
+
+# 2. Parse
+talks <- sessions |> 
+  html_elements("li")
+
+talks_titles <- talks |> 
+  html_elements("") |> 
+  html_text()
+
+talks_speaker <- talks |> 
+  html_elements("") |> 
+  html_text()
+
+talks_authors <- talks |> 
+  html_elements("") |> 
+  html_text()
+```
+
+## Let's scrape! Solution
+
+```{r}
+# 1. Request & collect raw html
+html <- read_html("https://www.ic2s2.org/program.html")
+
+sessions <- html |> 
+  html_elements(".nav_list")
+
+# 2. Parse
+talks <- sessions |> 
+  html_elements("li")
+
+talks_titles <- talks |> 
+  html_elements("b") |> 
+  html_text()
+
+talks_speaker <- talks |> 
+  html_elements("u") |> 
+  html_text()
+
+talks_authors <- talks |> 
+  html_elements("i") |> 
+  html_text()
+
+head(talks_titles)
+head(talks_speaker)
+head(talks_authors)
+```
+
+We can now try to wrangle the data into a suitable format:
+
+```{r}
+#| error: true
+#| class: fragment
+# 3. Wrangle
+ic2s2_program <- tibble(talks_titles, talks_speaker, talks_authors)
+```
+
+```{r}
+#| class: fragment
+length(talks_titles)
+length(talks_speaker)
+length(talks_authors)
+```
+
+## Let's scrape (a little better)!
+
+:::: {.columns}
+
+::: {.column width="45%"}
+If several elements are children of a element that represents our "case"/data row, we can loop over the identified parent elements.
+For this, let's write a function that parses one talk:
+
+```{r}
+talks <- sessions |> 
+  html_elements("li")
+
+parse_talks <- function(x) {
+  title <- x |> 
+    html_elements("b") |> 
+    html_text()
+  
+  speaker <- x |> 
+    html_elements("u") |> 
+    html_text()
+  
+  author <- x |> 
+    html_elements("i") |> 
+    html_text()
+  tibble(title, speaker, author)
+}
+
+parse_talks(talks[[1]])
+```
+:::
+
+::: {.column width="50%" .fragment}
+
+Now we can use the function to loop over all talks:
+
+```{r}
+talks_data <- map(talks, parse_talks) |> 
+  bind_rows() |> 
+  separate(col = title, into = c("time", "title"), sep = " - ")
+talks_data
+```
+:::
+
+::::
+
+
+## But What about Sessions?
+
+We can start from a slighly different venture point to get clean selection of all session elements:
+
+```{r}
+titles <- html |> 
+  html_elements(".wrapper.style2") |> 
+  html_elements(":not(header)>h2") # all h2 which are note directly below a
+length(titles)
+
+sessions <- html |> 
+  html_elements(".wrapper.style2") |> 
+  html_elements("ul")
+length(sessions)
+```
+
+They have the same length, which means we can process them alongside each other:
+
+```{r}
+#| class: fragment
+talks_data <- map2(titles, sessions, function(x, y) {
+  chair <- x |> 
+    html_element("i") |> 
+    html_text()
+    
+  session_title <- x |> 
+    html_text() |> 
+    str_remove(chair)
+  
+  y |> 
+    html_elements("li") |> 
+    map(parse_talks) |> 
+    bind_rows() |> 
+    mutate(session = session_title, chair = chair, .before = 1)
+  
+}) |> 
+  bind_rows()
+talks_data
+```
+
+```{r}
+#| echo: false
+saveRDS(talks_data, "../data/ic2s2_2023_data.rds")
+```
+
+## Exercises 3
+
+1. Run the function we used in `map2` in the last chunk on only one title and session nodeset to better understand what the function is doing
+
+2. Say we wanted to also get the Plenary sessions and posters. How could we adapt the code from the last slide?
+
+
+# Example: 2023 ECPR General Conference
+## What do we want
+
+:::: {.columns}
+
+::: {.column width="45%"}
+- General goal in the course: we want to build a database of conference attendance and link this to researchers
+- So for each website:
+  - Speakers
+  - (Co-)authors
+  - Paper/talk titles
+  - Panel (to see who was in the same ones)
+- In the next session we will also collect some researcher data
+:::
+
+::: {.column width="50%" }
+[
+  ![](media/ecpr.png)
+](https://ecpr.eu/Events/AcademicProgramme/Schedule?eventID=214)
+:::
+
+::::
+
+## Let's investigate the site a little
+
+:::: {.columns}
+
+::: {.column width="45%" .incremental}
+- Interestingly, we can sort and filter the data
+- This is an indicator that the site *very* likely uses a JavaScript function...
+- ... that gets the data from somewhere!
+- In fact, when we download the html content, it is quite large
+
+```{r}
+#| class: fragment
+html <- readLines("https://ecpr.eu/Events/AcademicProgramme/Schedule?eventID=214")
+object.size(html) |> 
+  format(units = "MB")
+```
+
+:::
+
+::: {.column width="50%"}:::
+![](media/ecpr-schedule.png)
+::::
+
+![](media/ecpr-schedule-json.png){.absolute .fragment top="50" right="50"}
+
+## Let's Try to get the json: why?
+
+Why:
+
+- JavaScript Object Notation (json) is a way of storing complicated nested data
+- data is put into a character string that indicates object types and relation of objects
+- R knows how to read json strings/files and can easily process them
+
+```{r}
+library(jsonlite)
+json_string <- list(x = 1:10, y = list(z = 1:10, a = LETTERS[1:10])) |> 
+  toJSON()
+json_string
+```
+
+```{r}
+fromJSON(json_string)
+```
+
+- essentially we seem to get pre-packaged data here :)
+
+## Getting the json string
+
+We use the standard selector to get the script inside the scheduleGrid_Container:
+
+```{r}
+html <- readLines("https://ecpr.eu/Events/AcademicProgramme/Schedule?eventID=214", encoding = "windows-1252") |>
+  paste(collapse = "\n") |>
+  read_html()
+
+json_string <- html |>
+  html_element("#scheduleGrid_Container script") |>
+  html_text()
+```
+
+Dont't try to print the entire string, since it is quite large and might crash `RStudio`!
+
+```{r}
+nchar(json_string)
+substr(json_string, 1, 250)
+```
+
+Note: In newer versions of `R` `read_html` seems to have a bug that causes problems with special encodings, which is why I load the data with the base function `readLines()`.    ^
+
+## Parsing the json string
+
+Let's give it a try:
+
+```{r}
+#| error: true
+fromJSON(json_string)
+```
+
+The problem is that this is not just the json itself, but also some Javascript to sort and render it:
+
+```{r}
+substr(json_string, 1, 250)
+```
+
+If you have a little experience with json, you can spot here that the actual data starts only here:
+
+```
+data.ArrayStore({\"data\"
+(right here) ---^
+```
+## <s>Parsing</s> Cleaning the json string
+
+```{r}
+#| error: true
+json_clean <- json_string |>
+  str_remove(fixed("DevExpress.utils.readyCallbacks.add((function($){$(\"#AcademicProgramme_ScheduleGrid\").dxDataGrid({\"dataSource\":{\"store\":new DevExpress.data.ArrayStore("))
+fromJSON(json_clean)
+```
+
+It looks like there is some more Javascript code in the data.
+We can convert the date function into proper json data with a little regular expression:
+
+```{r}
+str_replace_all('"StartDate":new Date(2023, 8, 4)', "new Date\\((\\d+), (\\d+), (\\d+)\\)", "\"\\1-\\2-\\3\"")
+```
+
+:::{.fragment}
+Perfect, let's try this again:
+
+```{r}
+#| error: true
+json_clean <- json_string |>
+  str_remove_all(fixed("DevExpress.utils.readyCallbacks.add((function($){$(\"#AcademicProgramme_ScheduleGrid\").dxDataGrid({\"dataSource\":{\"store\":new DevExpress.data.ArrayStore(")) |> 
+  str_replace_all("new Date\\((\\d+), (\\d+), (\\d+)\\)", "\"\\1-\\2-\\3\"")
+fromJSON(json_clean)
+```
+
+Blimey! More garbage :(
+:::
+
+## <s>Parsing</s> Cleaning the json string: Second attempt
+
+It seems there is more problems at the end of the json string.
+So let's have a look:
+
+```{r}
+len <- nchar(json_string)
+substr(json_string, len - 1100, len) # It took a few guesses to circle in on the 1100
+```
+
+It seems `Elisa\\u0026nbsp;Bellè` is still part of the data and `R` guess pretty well which part is the garbage.
+Let's try to remove the trailing Javascript bits.
+
+:::{.fragment}
+Perfect, let's try this again:
+
+```{r}
+#| error: true
+json_clean <- json_string |>
+  str_remove_all(fixed("DevExpress.utils.readyCallbacks.add((function($){$(\"#AcademicProgramme_ScheduleGrid\").dxDataGrid({\"dataSource\":{\"store\":new DevExpress.data.ArrayStore(")) |> 
+    str_remove_all(fixed(")},\"showBorders\":true,\"showColumnLines\":false,\"showRowLines\":true,\"paging\":{\"pageSize\":20},\"columnHidingEnabled\":true,\"columnAutoWidth\":true,\"wordWrapEnabled\":true,\"searchPanel\":{\"visible\":true,\"searchVisibleColumnsOnly\":true},\"columns\":[{\"dataField\":\"StartDate\",\"cssClass\":\"align-top\",\"visible\":false},{\"dataField\":\"EndDate\",\"cssClass\":\"align-top\",\"visible\":false},{\"dataField\":\"Activity\",\"cssClass\":\"align-top\",\"encodeHtml\":false,\"allowHiding\":false},{\"dataField\":\"Papers\",\"cssClass\":\"align-top\",\"encodeHtml\":false,\"allowHiding\":true,\"hidingPriority\":1},{\"dataField\":\"People\",\"cssClass\":\"align-top\",\"encodeHtml\":false,\"allowHiding\":true,\"hidingPriority\":0},{\"name\":\"ItineraryButton\",\"cssClass\":\"align-top\",\"caption\":\" \",\"encodeHtml\":false,\"allowHiding\":true,\"hidingPriority\":2,\"calculateCellValue\":function(data) { return scheduleGrid.formatItineraryButton(data); },\"alignment\":\"center\"}]});}).bind(this, jQuery));")) |>
+  str_replace_all("new Date\\((\\d+), (\\d+), (\\d+)\\)", "\"\\1-\\2-\\3\"")
+json_parsed <- fromJSON(json_clean)
+```
+
+Smashing! `R` converted the data succesfully!
+:::
+
+## Wrangling the data: first look
+
+Let's have a look at the data now:
+
+```{r}
+glimpse(json_parsed)
+```
+
+::: {.incremental}
+- It seems that `ecpr_data` is now a list that contains only 1 `data.frame`.
+- This `data.frame` seems to have a mix of clean data and HTML code
+- That means we need to do a little more parsing
+:::
+
+## Wrangling the data: first steps
+
+As a first step, we pull the data out and save it in a new object:
+
+```{r}
+ecpr_data_df <- json_parsed$data
+ecpr_data_df$Papers[2]
+```
+
+Now since we are used to looking at HTML not in its raw form, but in a browser, we can define a small function to write the HTML code to a file and ask the browser to render it:
+
+```{r}
+check_in_browser <- function(html) {
+  tmp <- tempfile(fileext = ".html")
+  writeLines(html, tmp)
+  browseURL(tmp)
+}
+```
+
+```{r}
+#| eval: false
+check_in_browser(ecpr_data_df$Papers[2])
+```
+
+:::{.fragment}
+![](media/ecpr-look-in-browser.png)
+:::
+
+## Wrangling the data: Getting some data
+
+```{r}
+html <- read_html(ecpr_data_df$Papers[2])
+paper_title <- html |>
+  html_elements("[href*='PaperDetails']") |>
+  html_text2()
+paper_title
+```
+
+```{r}
+authors <- html |>
+  html_elements("[href*='profile']") |>
+  html_text2()
+authors
+```
+
+```{r}
+author_urls <- html |>
+  html_elements("[href*='profile']") |>
+  html_attr("href") 
+author_urls
+```
+
+## Wrangling the data: writing a parser
+
+```{r}
+extract_papers <- function(html) {
+  html <- read_html(html)
+
+  paper_title <- html |>
+    html_elements("[href*='PaperDetails']") |>
+    html_text2()
+  
+  authors <- html |>
+    html_elements("[href*='profile']") |>
+    html_text2()
+  
+  author_urls <- html |>
+    html_elements("[href*='profile']") |>
+    html_attr("href") 
+  
+  tibble(paper_title, authors, author_urls)
+}
+```
+
+```{r}
+#| class: fragment
+extract_papers(ecpr_data_df$Papers[2])
+```
+
+## Wrangling the data: parsing the whole data
+
+```{r}
+#| error: true
+ecpr_data <- ecpr_data_df |>
+  filter(Papers != "") |> # remove empty lines
+  mutate(papers = map(Papers, extract_papers)) # loop over all sessions
+```
+
+Another error :( let's investigate!
+
+:::{.fragment}
+
+```{r}
+#| class: fragment
+html <- ecpr_data_df |>
+  filter(Papers != "") |> 
+  slice(2) |> 
+  pull(Papers) |> 
+  read_html()
+
+paper_title <- html |>
+  html_elements("[href*='PaperDetails']") |>
+  html_text2()
+
+authors <- html |>
+  html_elements("[href*='profile']") |>
+  html_text2()
+
+author_urls <- html |>
+    html_elements("[href*='profile']") |>
+    html_attr("href") 
+
+paper_title
+authors
+author_urls
+```
+
+Makes sense that some papers have several authors, so let's take another look at the HTML here:
+
+```{r}
+ecpr_data_df |>
+  filter(Papers != "") |> 
+  slice(2) |> 
+  pull(Papers) |> 
+  cat()
+```
+
+Annoyingly, there does not seem to be a good way to combine paper titles and authors from this HTML structure :(
+:::
+
+## Wrangling the data: building a *better* parser
+
+On the other hand, html code is just text, so maybe we can manipulate the strings a little?
+
+```{r}
+author_lines <- html |>
+  as.character() |>
+  strsplit(split = "\n") |>
+  pluck(1) |>
+  str_subset("^Author")
+author_lines
+```
+
+Now we have only 5 lines that mention an author!
+
+:::{.fragment}
+Let's try to parse them using a loop
+
+```{r}
+map(author_lines, function(x) {
+  html <- read_html(x)
+  author_urls <- html |>
+    html_elements("a") |>
+    html_attr("href")
+  
+  authors <- html |>
+    html_elements("a") |>
+    html_text2()
+  list(author_urls = author_urls, authors = authors)
+})
+```
+
+This gives us a list with the right number of elements, while some elements contain several authors.
+:::
+
+## Wrangling the data: building a *better* parser
+
+```{r}
+extract_papers <- function(html) {
+  html <- read_html(html)
+
+  paper_title <- html |>
+    html_elements("[href*='PaperDetails']") |>
+    html_text2()
+
+  authors <- html |>
+    as.character() |>
+    strsplit(split = "\n") |>
+    pluck(1) |>
+    str_subset("^Author")
+
+  profiles <- map(authors, function(x) {
+    # some author fields are empty, we need to check for that
+    if (nchar(x) <= 10L) {
+      return(list(author_urls = NA_character_, authors = NA_character_))
+    } else {
+      html <- read_html(x)
+      author_urls <- html |>
+        html_elements("a") |>
+        html_attr("href")
+
+      authors <- html |>
+        html_elements("a") |>
+        html_text2()
+      return(list(author_urls = author_urls, authors = authors))
+    }
+  })
+
+  tibble(paper_title, authors = map(profiles, "authors"), author_urls = map(profiles, "author_urls"))
+
+}
+```
+
+```{r}
+#| class: fragment
+ecpr_data_df |>
+  filter(Papers != "") |> 
+  slice(2) |> 
+  pull(Papers) |> 
+  extract_papers() |> 
+  unnest(c(authors, author_urls)) # unnest puts each paper into its own row, duplicating ids where necessary
+```
+
+## Wrangling the data: final steps
+
+```{r}
+ecpr_data <- ecpr_data_df |>
+  filter(Papers != "") |> 
+  mutate(papers = map(Papers, extract_papers))
+ecpr_data |>
+  select(panel_id = ID, event_id = EventID, papers) |> 
+  unnest(papers) 
+```
+
+
+```{r}
+ecpr_data_tidy <- ecpr_data |>
+  select(panel_id = ID, event_id = EventID, papers) |>
+  unnest(papers) |>
+  unnest(c(authors, author_urls)) |>
+  distinct(paper_title, authors, .keep_all = TRUE)
+
+ecpr_data_tidy |>
+  count(authors, sort = TRUE)
+```
+
+```{r}
+#| echo: false
+saveRDS(ecpr_data_tidy, "../data/ecpr_2023_data.rds")
+```
+
+
+## Exercises 4
+
+1. Can you find older iterations of the ECPR conference? How would you scrape these programmes?
+
+# Example: 2023 CompText (a special case)
+## What do we want
+
+:::: {.columns}
+
+::: {.column width="45%"}
+- General goal in the course: we want to build a database of conference attendance and link this to researchers
+- So for each website:
+  - Speakers
+  - (Co-)authors
+  - Paper/talk titles
+  - Panel (to see who was in the same ones)
+- In the next session we will also collect some researcher data
+:::
+
+::: {.column width="50%" .fragment}
+However:
+
+- Comptext did not have an online programme
+- Instead, the programme is distributed via this PDF: <https://www.comptextconference.org/wp-content/uploads/2023/05/COMPTEXT-2023-programme-May-9-2023.pdf>
+:::
+
+::::
+
+## Scraping data from PDFs?
+
+:::: {.columns}
+
+::: {.column width="45%"}
+- Data inside a PDF is actually not such an uncommon case
+- Many institutions share PDFs with tables, images and lists of data
+- We can use some of our new pattern finding skills to scrape data from these PDFs as well though
+  - Session names seem to be in a larger font and bold
+  - Paper titles are in italics
+  - Authors are either bold or plain font
+:::
+
+::: {.column width="50%"}
+![](media/pdf.png)
+:::
+
+::::
+
+## Let's investigate the PDF a little
+
+```{r}
+library(pdftools)
+comptext <- pdf_data("https://www.comptextconference.org/wp-content/uploads/2023/05/COMPTEXT-2023-programme-May-9-2023.pdf", font_info = TRUE)
+comptext[[7]]
+```
+
+We see here that:
+
+- each page is an element in a list
+- each word is in one row of the table
+- it contains the font_size and font_name
+- the position of each word on tha page is given with x and y coordinates
+
+
+:::{.fragment}
+Let's investigate a few words we saw above:
+
+```{r}
+# a panel name
+comptext[[7]] |> 
+  filter(str_detect(text, "Intra-Party"))
+
+# a paper title
+comptext[[7]] |> 
+  filter(str_detect(text, "Politicization"))
+
+# a speaker name
+comptext[[7]] |> 
+  filter(str_detect(text, "Alberto"))
+
+# a co-author name
+comptext[[7]] |> 
+  filter(str_detect(text, "Agnieszka"))
+
+# a word in the right column
+comptext[[7]] |> 
+  filter(str_detect(text, "Yael"))
+
+# a word on the right edge of the left column
+comptext[[7]] |> 
+  filter(str_detect(text, "Innova-"))
+```
+
+It looks like we can distinguish some types of information by the font_name and the info at which y and x position a word appears.
+:::
+
+## Combining the columns
+
+As a first step, we want the text in the left column to appear before the text in the right column.
+We can use the x position for this.
+
+```{r}
+tidy_page <- function(page) {
+  left_column <- page |> 
+    filter(x < 300) |> 
+    group_by(y) |> 
+    summarise(text = paste(text, collapse = " "),
+              font_name = list(unique(font_name)))
+  
+  right_column <- page |> 
+    filter(x > 300) |> 
+    group_by(y) |> 
+    summarise(text = paste(text, collapse = " "),
+              font_name = list(unique(font_name)))
+  
+  bind_rows(left_column, right_column)
+    
+}
+```
+
+## Finding and using patterns
+
+```{r}
+comptext_data <- comptext[7:14] |> 
+  # bring the text in the correct order on each page
+  map(tidy_page) |> 
+  bind_rows() |> 
+  # paper titles use a specific font, which make them easy to identify
+  mutate(paper_title = font_name == "VQHLVV+SFTI1000") |> 
+  # lines with more than one font (bold and non-bold) are meta information, let's note that
+  mutate(font_name = map_chr(font_name, function(x) ifelse(length(x) > 1, "meta", x))) |> 
+  # Panels start with the string panel and a large bold font
+  mutate(panel_start = font_name == "ZGRRLU+SFBX1000" & str_detect(text, "Panel")) |> 
+  # using cumsum, we count the TRUE values. One appears at the start of each panel
+  mutate(panel = cumsum(panel_start)) |> 
+  # we are not interested in the information before the first panel
+  filter(panel > 0) |> 
+  group_by(panel) |> 
+  # we can count the first appearance of a paper title to give the paper a unique id per panel
+  mutate(paper_nr = cumsum(paper_title & !lag(paper_title))) |> 
+  # now we can group the data using this id to make sure the authors are matched to the right paper
+  group_by(panel, paper_nr) |> 
+  # summarised takes several elements and uses a function to return exactly one
+  summarise(
+    # we select all text where the paper_nr == 0, which is te panel title
+    panel_title = paste(text[paper_nr == 0], collapse = " "),
+    # now we combine the text in the rows that have a paper title
+    paper_title = paste(text[paper_title], collapse = " "),
+    # finally, we put the authors in a list. They are the text within a panel descript that uses one of two fonts
+    author = list(text[font_name %in% c("ZXOBMV+SFRM1000", "ZGRRLU+SFBX1000")]),
+    .groups = "drop"
+  ) |> 
+  # we replace empty rows with NAs so we can fill them with the preeeding text
+  mutate(across(panel_title:paper_title, function(x) ifelse(x == "", NA_character_, x))) |> 
+  fill(panel_title) |> 
+  filter(paper_nr > 0) |> 
+  unnest(author)
+comptext_data
+```
+
+```{r}
+#| echo: false
+saveRDS(comptext_data, "../data/comptext_2023_data.rds")
+```
+
+
+## Exercises 5
+
+1. In the folder /data (relative to this document) there is a PDF with some text. Read it into R
+2. The PDF has two columns, bring the text in the right order as a human would read it
+3. Let's assume you wanted to have this text in a table with one column indicating the section and one having the text of the section
+4. Now let's assume you wanted to parse this on the paragraph level instead
+
+
+
+# Homework
+
+You have seen some tools and tricks to scrape websites now.
+But your best ally in web scraping is **experience**!
+Until tomorrow noon, your task is to find some conference you could imagine attending and scrape their website to get the same information we extracted today.
+Even if you don't fully succeed, document the steps you take and note down where the information can be found.
+If you collect raw html in R and the data is not where it should be (e.g., the html elements containing panel names do not exist), you might have discovered a more advanced site. 
+Note that down and try another conference.
+
+Deadline: Thursday noon
+
+
+# Wrap Up
+
+Save some information about the session for reproducibility.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show Session Info"
+sessionInfo()
+```
