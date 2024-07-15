@@ -45,7 +45,8 @@ source("https://gist.githubusercontent.com/JBGruber/28c79af6d5f9015370feef31da2c
 get_old_packages()
 ```
 
-After cloning this repository to your computer, you can install all required R packages with the code below. But you can do this after the first day (when we discuss how you work with GitHub):
+After cloning this repository to your computer, you can install all required R packages with the code below.
+But you can do this after the first day (when we discuss how you work with GitHub):
 
 ```{r}
 #| eval: false
