@@ -1,0 +1,1240 @@
+---
+title: "Session 2:	Data Structures and Wrangling"
+subtitle: "ESS: Introduction to Web Scraping and Data Management for Social Scientists"
+author: "Johannes B. Gruber"
+date: 2024-07-23
+from: markdown+emoji
+format:
+  revealjs:
+    smaller: true
+    width: 1600
+    height: 900
+    scrollable: true
+    code-line-numbers: true
+    slide-number: c/t
+    logo: ../ess_logo.png
+    embed-resources: true
+bibliography: ../references.bib
+execute:
+  cache: true
+  echo: true
+engine: knitr
+highlight-style: nord
+---
+
+# Introduction
+## This Course
+
+<center>
+```{r setup}
+#| echo: false
+#| message: false
+library(tinytable)
+tibble::tribble(
+  ~Day, ~Session,
+  1,  "Introduction",
+  2,  "Data Structures and Wrangling",
+  3,  "Working with Files",
+  4,  "Linking and joining data & SQL",
+  5,  "Scaling, Reporting and Database Software",
+  6,  "Introduction to the Web",
+  7,  "Static Web Pages",
+  8,  "Application Programming Interface (APIs) ",
+  9,  "Interactive Web Pages",
+  10, "Building a Reproducible Research Project",
+) |> 
+  tt() |> 
+  style_tt() |> 
+  style_tt(i = 2, background = "#FDE000")
+```
+</center>
+
+## The Plan for Today
+
+:::: {.columns}
+
+::: {.column width="60%"}
+In this session, you learn:
+
+- how data plays into the research process
+- the difference between *content* and *structure* of data
+- about the basic data structures in R and what they are good for
+- how to turn information into data
+- the key role of tables
+- and how to turn bad data structures into good tables
+
+
+:::
+
+::: {.column width="30%" }
+![](https://images.unsplash.com/photo-1557813282-bcd50093e38f?q=80&w=2576&auto=format&fit=crop)
+[Zane Lee](https://unsplash.com/@zane404) via unsplash.com
+:::
+
+::::
+
+# Data Data Data 
+## The research process
+
+Can be broadly separated into three steps:
+
+1. Data Collection
+2. Data Processing
+3. Data Analysis
+
+::: {.ref}
+Source: @weidmann_data_2023
+:::
+
+::: {.notes}
+Collection and processing are often left out of academic curricula, which produces many researchers who are good at data analysis, but do not know how to get the data and wrangle it into the shape they need.
+:::
+
+## The research process
+
+<center>
+![](media/data-science.png){width="90%"}
+</center>
+
+::: {.ref}
+Source: @WickhamR4DS
+:::
+
+::: {.notes}
+80% percent of data science is importing and processing (not backed by data, but a common saying)
+:::
+
+## The research process {visibility="uncounted"}
+
+Can be broadly separated into three steps [@weidmann_data_2023]:
+
+1. Data Collection -- next week
+2. **Data Processing -- this week**
+3. Data Analysis -- only examples
+
+## Why is Data Processing important?
+
+::: {.incremental}
+- Data to answer most interesting questions is almost never available in the format you need it--otherwise someone would have done it already
+- Being able to combine and wrangle data into the shape you need makes you wanted inside and outside academia
+- Good Data Processing strategies will let you sleep easy at night:
+  + *manageable*: Avoiding the REAL drudge work of hand-cleaning data by building pipelines to automate
+  + *scalable*: Extending your data collection to new cases and scopes is easy
+  + *transparent*: It will to communicate (or remember) later
+  + *robust*: It won't fail if you draw out a JENGA stone
+:::
+
+## Your turn (Exercises 1)
+
+- What was your worst experience with data?
+
+# What is Data?
+## Definition
+
+
+:::: {.columns}
+::: {.column width="60%"}
+::: {.incremental}
+- systematic and structured way of representing information (about the real world)
+- consist of content + structure
+  - content: WHAT is stored, the information itself (e.g., numbers, text, images, sound or videos)
+  - structure: HOW information is stored
+  - structure makes information (easily) **readable by a computer**
+:::
+:::
+::: {.column width="30%" }
+::: {.fragment}
+![](media/excel.png)
+:::
+:::
+::::
+
+::: {.ref}
+Source: @weidmann_data_2023
+:::
+
+
+## Core Data Structures in `R`
+
+They can take on a few different forms:
+
+Sure! Here are the common data types in R along with a brief explanation for each:
+
+- **Logical**: Represents Boolean values, either `TRUE` or `FALSE`.
+- **Integer**: Specifically represents integer values. Example: `42L` (The `L` indicates that the number is an integer)
+- **Numeric or Double**: Represents decimal numbers or real numbers. Example: `42`, `3.14`
+- **Character**: Represents text or string values. Example: `"hello"`
+- **Factor**: Represents categorical data, data is stored as codes and levels. Example: `factor(c("male", "female"))`
+- **Date**: Represents dates. Example: `as.Date("2024-07-15")`
+- **POSIXct / POSIXlt**: Represents date-time objects. Examples: `as.POSIXct("2024-07-15 12:34:56")`, `as.POSIXlt("2024-07-15 12:34:56")`
+- **Raw**: Represents raw bytes, often used for binary data. Example: `charToRaw("A")`
+- **Matrix**: A 2-dimensional array where all elements must be of the same type (numeric, character, etc.). Example:
+
+    ```R
+    my_matrix <- matrix(
+      data = 1:9,
+      nrow = 3,
+      ncol = 3
+    )
+    ```
+
+## Nested Data Structures in `R`
+
+- **Data Frame**: A table or 2-dimensional array-like structure where each column can contain different types of data (numeric, character, factor, etc.). Example:
+
+    ```R
+    data <- tibble(
+      name = c("Alice", "Bob", "Charlie"),
+      age = c(25, 30, 35),
+      gender = c("F", "M", "M")
+    )
+    ```
+- **List**: A versatile data structure that can contain elements of different types, including vectors, data frames, and even other lists. Example:
+    
+    ```R
+    my_list <- list(
+      name = "Alice",
+      age = 25,
+      scores = c(85, 90, 88),
+      details = list(address = "123 Main St", city = "Anytown")
+    )
+    ```
+
+## Your turn (Exercises 2)
+
+- Did I forget any data structures?
+- head to https://www.menti.com/ and vote with code "12 15 72 6"
+
+
+# From information to structured data
+## Simple Example
+
+```{r}
+ex1 <- "United Kingdom is a country with 67 million inhabitants, its capital is London."
+```
+
+:::{.fragment}
+```{r}
+library(stringr)
+country     <- str_extract(ex1, "^.+?(?= is)")
+inhabitants <- str_extract(ex1, "\\d+?(?= million)")
+capital     <- str_extract(ex1, "(?<=capital is ).+?(?=\\.)")
+data.frame(
+  country,    
+  inhabitants,
+  capital
+)
+```
+:::
+
+:::{.fragment}
+But what are these strange symbols?
+:::
+
+::: {.notes}
+easy to extract for humans, but it is much more difficult to process computationally
+:::
+
+
+## Regular Expression: your friend when working with strings
+
+- Regular expressions are "a very terse language that allow you to describe patterns in strings" [@WickhamR4DS]
+- **String**: sequences of characters, for instance, letters and punctuation (stored as `character` in `R`). Example: "Headline"
+- **Regular expressions**: string patterns with non-literal meaning that tells computer what to look for:
+  ```{r}
+  strings <- c("headline", "Headline")
+  str_view(strings, "[Hh]")
+  ```
+
+  ```{r}
+  str_view(strings, "[Hh]eadline")
+  ```
+  
+  Explanation: `[Hh]` characters inside square brackets are matched
+  
+## Regular Expression: your "friend" when working with strings
+
+| Function                                                                  | Syntax     | Example      | Matches                                                                      |
+| :------------------------------------------------------------------------ | :--------: | :----------: | :--------------------------------------------------------------------------: |
+| **Specifier: What to match**                                              |            |              |                                                                              |
+| All characters except for new lines                                       | `.`        | `d.g`        | <code>d**i**g</code>, <code>d**!**g</code>                                   |
+| Word characters `(letters, digits,_)`                                     | `\\w`      | `d\\wg`      | `dig`, `dog`                                                                 |
+| Digits `(0 to 9)`                                                         | `\\d`      | `202\\d`     | `2020`, `2021`                                                               |
+| Whitespace `(space, tab, newline)`                                        | `\\s`      |              |                                                                              |
+| Newline                                                                   | `\n`       |              |                                                                              |
+| Beginning of the string                                                   | `^`        | `^go`        | <code>**go**<span class='gray'></span>go go</code>                           |
+| Ending of the string                                                      | `$`        | `go$`        | <code><span class='gray'></span>go go**go**</code>                           |
+| Beginning or end of word                                                  | `\\b`      | `\\bword\\b` | <code><span class='gray'>a</span> **word**<span class='gray'></span>!</code> |
+| Either first or second option                                             | `…|…`      | `cat| dog`   | `cat`, `dog`                                                                 |
+| **Quantifier: How many to match**                                         |            |              |                                                                              |  
+| Zero or more                                                              | `*`        | `d.*g`       | `dg`, `drag`, `d = g`                                                        |
+| Zero or more (non-greedy)                                                 | `*?`       | `d.*?g`      | <code>**dog**<span class='gray'></span>g</code>                              |
+| One or more                                                               | `+`        | `\\d+%`      | `1%`, `200%`                                                                 |
+| One or more (non-greedy)                                                  | `+?`       | `\\d+%`      | <code><span class='gray'></span>20**0\\%**</code>                            |
+| Zero or one                                                               | `?`        | `colou?r`    | `color`, `colour`                                                            |
+| Exactly *n* times                                                         | `{n}`      | `\\d{4}`     | `1940`, `2020`                                                               |
+| At least *n* times                                                        | `{n,}`     | `\\d{3,}`    | `194`, `2020` but not `19`                                                   |
+| Between *n* and *m* times                                                 | `{n,m}`    | `\\d{3,4}`   | `194`, `2020` but not `19`, `20200`                                          |  
+| **Other constructs**                                                      |            |              |                                                                              |
+| Groups                                                                    | `(…)`      | `'(bla )+'`  | `'bla bla bla'`                                                              |
+| Back references                                                           | `\\1`      | `str_replace("this", "(th)is", "\\1ose")` | produces "those"                                |
+| Selection of characters                                                   | `[…]`      | `d[iuo]g`    | `dig`, `dug`, `dog`                                                          |
+| Range of characters in selection                                          | `[A-z]`    | `[Hhl]`      | `H`, `h`, `l`                                                                |
+| Everything except selection                                               | `[^...]`   | `[^Hhl]`     |                                                                              |
+| Escape special character                                                  | `\\`       | `3\\.14`     | `3.14` but not `3,14`                                                        |
+| Lookahead                                                                 | `(?=)`     | `thi(?=s)`   | `thi`                                                                        |
+| Lookbehind                                                                | `(?<=)`    | `(?<=t)his`  | `his`                                                                        |
+| Negative lookahead                                                        | `(?!)`     | `(?!W)his`   | `his`                                                                        |
+
+: Regular expression syntax (adapted from @cssbook) {.striped .hover}
+
+## Regular Expression: important functions from `stringr`
+
+- `str_replace_all()`: replaces with different string
+- `str_remove_all()`: removes completely
+- `str_extract_all()`: extracts pattern matching regular expression
+- `str_detect()`: returns a logical vector that is `TRUE` when regular expression matches
+- `str_subset()`: returns whole element when regular expression matches
+- `str_sub()`: returns, e.g., 4th until the 8th character
+- `fixed()`: turns of search for regular expressions
+
+### Learn more:
+
+- [@WickhamR4DS](https://r4ds.had.co.nz/strings.html#matching-patterns-with-regular-expressions)
+- [@cssbook](https://cssbook.net/content/chapter09.html#sec-regular)
+- [@Hase_textasdata](https://bookdown.org/valerie_hase/TextasData_HS2021/tutorial-9-searching-manipulating-string-patterns.html)
+
+
+## Longer Example
+
+```{r}
+data_input <- "
+Albania is a country with 2.8 million inhabitants, its capital is Tirana, and it was founded on 28 November 1912.
+Andorra is a country with 77,000 inhabitants, its capital is Andorra la Vella, and it was founded on 8 September 1278.
+Austria is a country with 8.9 million inhabitants, its capital is Vienna, and it was founded on 12 November 1918.
+Belarus is a country with 9.5 million inhabitants, its capital is Minsk, and it was founded on 25 August 1991.
+Belgium is a country with 11.5 million inhabitants, its capital is Brussels, and it was founded on 4 October 1830.
+Bosnia and Herzegovina is a country with 3.3 million inhabitants, its capital is Sarajevo, and it was founded on 1 March 1992.
+Bulgaria is a country with 6.9 million inhabitants, its capital is Sofia, and it was founded on 22 September 1908.
+Croatia is a country with 4 million inhabitants, its capital is Zagreb, and it was founded on 25 June 1991.
+Cyprus is a country with 1.2 million inhabitants, its capital is Nicosia, and it was founded on 16 August 1960.
+Czech Republic is a country with 10.7 million inhabitants, its capital is Prague, and it was founded on 1 January 1993.
+Denmark is a country with 5.8 million inhabitants, its capital is Copenhagen, and it was founded on 5 June 1849.
+Estonia is a country with 1.3 million inhabitants, its capital is Tallinn, and it was founded on 20 August 1991.
+Finland is a country with 5.5 million inhabitants, its capital is Helsinki, and it was founded on 6 December 1917.
+France is a country with 67 million inhabitants, its capital is Paris, and it was founded on 22 September 1792.
+Germany is a country with 83 million inhabitants, its capital is Berlin, and it was founded on 3 October 1990.
+Greece is a country with 10.4 million inhabitants, its capital is Athens, and it was founded on 25 March 1821.
+Hungary is a country with 9.6 million inhabitants, its capital is Budapest, and it was founded on 23 October 1989.
+Iceland is a country with 366,000 inhabitants, its capital is Reykjavik, and it was founded on 17 June 1944.
+Ireland is a country with 5 million inhabitants, its capital is Dublin, and it was founded on 6 December 1922.
+Italy is a country with 60 million inhabitants, its capital is Rome, and it was founded on 17 March 1861.
+Kosovo is a country with 1.8 million inhabitants, its capital is Pristina, and it was founded on 17 February 2008.
+Latvia is a country with 1.9 million inhabitants, its capital is Riga, and it was founded on 18 November 1918.
+Liechtenstein is a country with 39,000 inhabitants, its capital is Vaduz, and it was founded on 23 January 1719.
+Lithuania is a country with 2.8 million inhabitants, its capital is Vilnius, and it was founded on 11 March 1990.
+Luxembourg is a country with 634,000 inhabitants, its capital is Luxembourg City, and it was founded on 9 June 1815.
+Malta is a country with 514,000 inhabitants, its capital is Valletta, and it was founded on 21 September 1964.
+Moldova is a country with 2.6 million inhabitants, its capital is Chișinău, and it was founded on 27 August 1991.
+Monaco is a country with 39,000 inhabitants, its capital is Monaco, and it was founded on 8 January 1297.
+Montenegro is a country with 622,000 inhabitants, its capital is Podgorica, and it was founded on 3 June 2006.
+Netherlands is a country with 17.4 million inhabitants, its capital is Amsterdam, and it was founded on 26 July 1581.
+North Macedonia is a country with 2.1 million inhabitants, its capital is Skopje, and it was founded on 8 September 1991.
+Norway is a country with 5.4 million inhabitants, its capital is Oslo, and it was founded on 7 June 1905.
+Poland is a country with 38 million inhabitants, its capital is Warsaw, and it was founded on 11 November 1918.
+Portugal is a country with 10.3 million inhabitants, its capital is Lisbon, and it was founded on 5 October 1143.
+Romania is a country with 19 million inhabitants, its capital is Bucharest, and it was founded on 1 December 1918.
+Russia is a country with 144 million inhabitants, its capital is Moscow, and it was founded on 12 June 1990.
+San Marino is a country with 34,000 inhabitants, its capital is San Marino, and it was founded on 3 September 301.
+Serbia is a country with 6.7 million inhabitants, its capital is Belgrade, and it was founded on 5 June 2006.
+Slovakia is a country with 5.4 million inhabitants, its capital is Bratislava, and it was founded on 1 January 1993.
+Slovenia is a country with 2.1 million inhabitants, its capital is Ljubljana, and it was founded on 25 June 1991.
+Spain is a country with 47 million inhabitants, its capital is Madrid, and it was founded on 6 December 1978.
+Sweden is a country with 10.4 million inhabitants, its capital is Stockholm, and it was founded on 6 June 1523.
+Switzerland is a country with 8.3 million inhabitants, its capital is Bern, and it was founded on 12 September 1848.
+Ukraine is a country with 41 million inhabitants, its capital is Kyiv, and it was founded on 24 August 1991.
+United Kingdom is a country with 67 million inhabitants, its capital is London, and it was founded on 1 January 1801.
+Vatican City is a country with 825 inhabitants, its capital is Vatican City, and it was founded on 11 February 1929.
+"
+```
+
+
+:::{.fragment}
+```{r}
+library(tidyverse)
+tibble(input = data_input) |> 
+  separate_longer_delim(input, "\n") |> 
+  filter(input != "") |> 
+  mutate(
+    country     = str_extract(input, "^.+?(?= is)"),
+    inhabitants = str_extract(input, "\\d+?(?= million)"),
+    capital     = str_extract(input, "(?<=capital is ).+?(?=\\,)"),
+    founded     = str_extract(input, "\\d{1,2} [A-z]+ \\d{3,4}")
+  ) |> 
+  glimpse()
+```
+:::
+
+:::{.fragment}
+What is wrong with this?
+:::
+
+
+## Longer Example (fixed)
+
+```{r}
+country_df <- tibble(input = data_input) |> 
+  separate_longer_delim(input, "\n") |> 
+  filter(input != "") |> 
+  mutate(
+    country     = str_extract(input, "^.+?(?= is)"),
+    inhabitants = str_extract(input, "\\d+? million|[0-9,]+?(?= inhabitants)"),
+    capital     = str_extract(input, "(?<=capital is ).+?(?=\\,)"),
+    founded     = str_extract(input, "\\d{1,2} [A-z]+ \\d{3,4}")
+  ) |> 
+  mutate(
+    inhabitants = str_replace(inhabitants, " million", "000000"),
+    inhabitants = str_remove(inhabitants, ","),
+    inhabitants = as.integer(inhabitants),
+    founded     = lubridate::dmy(founded)
+  ) |> 
+  select(-input)
+glimpse(country_df)
+```
+
+## Exercises 3
+
+1. replace all whitespace characters in the country columns of `country_df` with underscores (`_`)
+2. remove all punctuation from the `data_input` vector
+3. Extract the date from the string and turn it into a proper date vector:
+
+```{r}
+string <- "Military defeats following the outbreak of the French Revolutionary Wars resulted in the insurrection of 10 August 1792. The monarchy was abolished and replaced by the French First Republic one month later."
+```
+
+4. Check which of the lines in `data_input` have the word "million" (hint: you need to split the string into a vector with `str_split()` first)
+5. Now save a subset of the lines into a new object
+6. From the following vector, I want you to write code that identifies the URLs from the German Wikipedia that do *not* use the secure Hypertext Transfer Protocol (HTTPS):
+
+```{r}
+vec <- c(
+  "https://en.wikipedia.org/wiki/France",
+  "https://en.wikipedia.org/wiki/Germany",
+  "https://de.wikipedia.org/wiki/Deutschland",
+  "http://de.wikipedia.org/wiki/Frankreich",
+  "https://de.wikipedia.org/wiki/Belgien",
+  "https://de.wikipedia.org/wiki/Bulgarien",
+  "http://de.wikipedia.org/wiki/K%C3%B6nigreich_D%C3%A4nemark",
+  "https://de.wikipedia.org/wiki/Slowenien",
+  "https://de.wikipedia.org/wiki/Rum%C3%A4nien"
+)
+```
+
+# Tables, Tables, Tables 
+## Country data in a `data.frame`
+
+:::: {.columns}
+::: {.column width="60%"}
+:::{.incremental}
+- different types of information, clearly labelled as such
+- each line refers to an observation, each column contains a different variable
+- the variables are stored in different data types:
+  ```{r}
+  typeof(country_df$country)
+  typeof(country_df$inhabitants)
+  typeof(country_df$founded)
+  ```
+- most statistical tools are designed to process data in tables (especially in the `tidyverse`)
+:::
+:::
+::: {.column width="40%" }
+```{r}
+country_df |> 
+  print(n = 46)
+```
+:::
+::::
+
+## Country data to plots
+
+:::: {.columns}
+::: {.column width="50%"}
+:::{.incremental}
+```{r}
+country_df |> 
+  count(founded = year(founded)) |> 
+  arrange(founded) |> 
+  mutate(countries = cumsum(n)) |> 
+  ggplot(aes(x = founded, y = countries)) +
+  geom_line() +
+  labs(x = NULL, y = NULL, title = "Number of countries in Europe over time*",
+       caption = "*Dissolved countries were ignored")
+```
+:::
+:::
+::: {.column width="50%" }
+```{r}
+country_df |> 
+  mutate(country = fct_reorder(country, inhabitants)) |> 
+  ggplot(aes(x = inhabitants, y = country)) +
+  geom_col() +
+  labs(x = NULL, y = NULL, title = "Largest countries in Europe*",
+       caption = "*By inhabitants")
+```
+:::
+::::
+
+## Accessing Data
+
+Say you want the inhabitants for row 45 (United Kingdom)
+
+```{r}
+country_df |> 
+  slice(45) |> 
+  pull(inhabitants)
+```
+
+Or better:
+
+```{r}
+country_df |> 
+  filter(country == "United Kingdom") |> 
+  pull(inhabitants)
+```
+
+Or maybe you want the entire row:
+
+```{r}
+country_df |> 
+  filter(country == "United Kingdom") 
+```
+
+Or all rows of countries older than 1300:
+
+```{r}
+country_df |> 
+  filter(founded < "1300-01-01") 
+```
+
+## Updating Data
+
+Let's say you don't like that the founding of France is set to the founding of the French Republic (22 September 1792) and you want to use the date of the Treaty of Verdun (10 August 843) instead:
+
+```{r}
+France <- tibble(country = "France", 
+                 inhabitants = 67000000L, 
+                 capital = "Paris", 
+                 founded = as.Date("843-08-10"))
+country_df |> 
+  rows_update(France, by = "country") |> 
+  filter(founded < "1300-01-01") 
+```
+
+## Adding Data
+
+What if a new country was founded in Europe today?
+
+```{r}
+essland <- tibble(country = "Essex Summer School", 
+                  inhabitants = 38 * 15, 
+                  capital = "Colchester Campus", 
+                  founded = Sys.Date())
+country_df |> 
+  add_case(essland) |> 
+  arrange(desc(founded)) |> 
+  head()
+```
+
+##  Deleting Data
+
+Now say you are only interested in countries with more than one million inhabitants.
+You can delete superfluos data with:
+
+```{r}
+country_df_clean <- country_df |> 
+  filter(inhabitants >= 1000000)
+```
+
+## Exercises 4
+
+1. From the `airports` table in the `nycflights13` package, access all airports that are in the Los Angeles time zone:
+
+```{r}
+nycflights13::airports
+```
+
+2. Access the `faa` of the airport at latitude 40.87522 and longitude -74.28136
+3. The Las Vegas International Aiport (LAS) has been renamed since the dataset was created. Update the name to "Harry Reid International"
+4. Delete all aiports that have `NA` as their timezone
+
+# Bad and good table structures
+## Grow tables down, not sideways
+
+:::: {.columns}
+::: {.column width="50%"}
+:::{.incremental}
+- Wide tables are often seen because it makes data entry convenient for humans
+- But they cause many issues when processing the data computationally
+:::
+:::
+::: {.column width="50%" }
+```{r}
+bad_table <- tibble(
+  country = c("Switzerland", "Austria"),
+  pop1950 = c(4.7, 6.9),
+  pop1960 = c(5.3, 7.1),
+  pop1970 = c(6.2, 7.5)
+)
+bad_table
+```
+:::
+::::
+
+## Grow tables down, not sideways: sideways are difficult
+
+Mean population across variables:
+
+```{r}
+bad_table |> 
+  summarise(
+    pop_mean_1950 = mean(pop1950),
+    pop_mean_1960 = mean(pop1960),
+    pop_mean_1970 = mean(pop1970)
+  )
+```
+
+Mean population overall:
+
+```{r}
+bad_table |> 
+  summarise(
+    pop_mean = mean(c(pop1950, pop1960, pop1970))
+  )
+```
+
+Plot population vs country:
+
+```{r}
+#| output-location: column
+ggplot(bad_table) +
+  geom_point(aes(x = pop1950, y = country), colour = "black") +
+  geom_point(aes(x = pop1960, y = country), colour = "grey") +
+  geom_point(aes(x = pop1970, y = country), colour = "green")
+```
+
+- now imagine there are 50 or 100 years in that observation...
+
+## Grow tables down, not sideways
+
+:::: {.columns}
+::: {.column width="50%"}
+:::{.incremental}
+- Every row now keeps an observation, each column represents a different variable
+- Rather than in the column header, year values are now their own variable
+- This form of a table is called a *long* table
+- Easy to add or remove observations
+- Most statistical tools are built for this table
+- Operations in `R` (and especially in the `tidyverse`) are not much easier
+:::
+:::
+::: {.column width="50%" }
+```{r}
+good_table <- tibble(
+  country = c(rep("Switzerland", 3), rep("Austria", 3)),
+  year = c(rep(c(1950, 1960, 1970), 2)),
+  population = c(4.7, 5.3, 6.2, 6.9, 7.1, 7.5)
+)
+good_table
+```
+
+:::
+::::
+
+::: {.ref}
+Source: @weidmann_data_2023
+:::
+
+## Grow tables down, not sideways: it makes computation easier
+
+Mean population across variables:
+
+```{r}
+good_table |> 
+  group_by(year) |> 
+  summarise(
+    pop_mean = mean(population)
+  )
+```
+
+Mean population overall:
+
+```{r}
+good_table |> 
+  summarise(
+    pop_mean = mean(population)
+  )
+```
+
+Plot population vs country:
+
+```{r}
+#| output-location: column
+ggplot(good_table) +
+  geom_point(aes(x = population, y = country, colour = as.factor(year)))
+```
+
+## Avoid reduncancy
+
+:::: {.columns}
+::: {.column width="50%"}
+:::{.incremental}
+- Some variables are connected to groups and never (or almost never) change
+- The constant repetition introduces redundant information in our dataset
+- Depending on the size of our data, this can lead to increased processing time, a larger memory footpint, and more demand for storage
+- Conceptually redundancy is introduced when we store information about different entities (that refer to each other) in a single table (here countries and population)
+:::
+:::
+::: {.column width="50%" }
+```{r}
+bad_table2 <- tibble(
+    country = c(rep("Switzerland", 3), rep("Austria", 3)),
+  year = c(rep(c(1950, 1960, 1970), 2)),
+  population = c(4.7, 5.3, 6.2, 6.9, 7.1, 7.5),
+  capital = c("Bern", "Bern", "Bern", "Vienna", "Vienna", "Vienna")
+)
+bad_table2
+```
+:::
+::::
+
+::: {.ref}
+Source: @weidmann_data_2023
+:::
+
+## Avoid reduncancy: Store entities in different tables
+
+:::: {.columns}
+::: {.column width="50%"}
+### population-per-year information
+
+```{r}
+good_table_population <- bad_table2 |> 
+  select(-capital)
+good_table_population
+```
+
+:::
+::: {.column width="50%"}
+### country-level information
+
+```{r}
+good_table_countires <- bad_table2 |> 
+  select(country, capital) |> 
+  distinct()
+good_table_countires
+```
+:::
+::::
+
+## Avoid reduncancy: When not to
+
+:::: {.columns}
+
+::: {.column width="60%"}
+:::{.incremental}
+- During data processing and management :white_check_mark:
+- During data analysis :x: (at least not strictly)
+- During analysis, you often want to compare, contrast, connect entities, so you need data about all of them
+- Create "analysis datasets" that contain all the data that you **currently** need
+
+```{r}
+#| classes: fragment
+#| output-location: fragment
+analysis_datasets <- merge(good_table_population, good_table_countires, by = "country")
+analysis_datasets
+```
+
+:::
+:::
+::: {.column .cropped width="30%" }
+![](https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=40&fit=crop&w=600&h=900){.cropped width="600px"}
+[Luke Chesser](https://unsplash.com/@lukechesser) via unsplash.com
+:::
+::::
+
+
+# Tidying data
+## Tidy Data
+
+> "Happy families are all alike; every unhappy family is unhappy in its own way."\
+> --- Leo Tolstoy
+
+> "Tidy datasets are all alike, but every messy dataset is messy in its own way."\
+> --- Hadley Wickham
+
+Tidyverse got its name from the idea of *tidy* data, which is defined as [@wickham_tidy_2014]:
+
+1. Each variable forms a column.
+2. Each observation forms a row.
+3. Each value is a cell; each cell is a single value.
+4. (Each type of observational unit forms a table.)
+
+![](https://raw.githubusercontent.com/hadley/r4ds/main/images/tidy-1.png)
+
+
+Any other form of data is by definition *messy data*.
+This is essentially the same definition like we've seen above: tidy data = good table.
+
+## Indetify the tidy Data
+
+:::: {.columns}
+
+::: {.column width="33%"}
+```{r}
+table1
+```
+:::
+::: {.column width="33%"}
+```{r}
+table2
+```
+:::
+::: {.column width="33%"}
+```{r}
+table3
+```
+:::
+::::
+
+## Reshaping
+
+From wide to long:
+
+```{r}
+tidy_table <- bad_table |> 
+  pivot_longer(
+    cols = starts_with("pop"), # define which columns this applies to
+    names_to = "year",         # name the new variable containing the column names
+    values_to = "population"   # name the new variable containing the cell values
+  ) |> 
+  mutate(year = as.integer(str_extract(year, "\\d+")))
+```
+
+As said above, this is exactly the same principle we looked at for a good table:
+
+```{r}
+all.equal(tidy_table, good_table)
+```
+
+
+## How does pivoting work?
+
+:::: {.columns}
+
+::: {.column width="50%"}
+
+```{r}
+df <- tribble(
+  ~id,  ~bp1, ~bp2,
+   "A",  100,  120,
+   "B",  140,  115,
+   "C",  120,  125
+)
+```
+
+```{r}
+df |> 
+  pivot_longer(
+    cols = bp1:bp2,
+    names_to = "measurement",
+    values_to = "value"
+  )
+```
+
+
+::: {.ref}
+Source: @WickhamR4DS
+:::
+:::
+::: {.column width="50%"}
+
+![](https://raw.githubusercontent.com/hadley/r4ds/main/diagrams/tidy-data/variables.png)
+
+![](https://raw.githubusercontent.com/hadley/r4ds/main/diagrams/tidy-data/column-names.png){.fragment}
+![](https://raw.githubusercontent.com/hadley/r4ds/main/diagrams/tidy-data/cell-values.png){.fragment}
+
+:::
+::::
+
+## More complex reshaping
+
+:::: {.columns}
+::: {.column width="50%"}
+
+```{r}
+household
+```
+
+```{r}
+household |> 
+  pivot_longer(
+    cols = !family, 
+    names_to = c(".value", "child"), 
+    names_sep = "_", 
+    values_drop_na = TRUE
+  )
+```
+:::
+::: {.column width="50%"}
+![](https://raw.githubusercontent.com/hadley/r4ds/main/diagrams/tidy-data/names-and-values.png){.fragment}
+:::
+::::
+
+## `pivot_wider`
+
+Not as common, but sometimes one or two columns contain several variables:
+
+```{r}
+cms_patient_experience
+```
+
+In this case, we need to do the opposite operations: widening data
+
+```{r}
+good_table |> 
+  pivot_wider(
+    id_cols = country, 
+    names_from = year, 
+    values_from = population, 
+    names_prefix = "pop"
+  )
+```
+
+We have reconstructed bad table :sweat:
+
+## `pivot_wider`: fix patient data
+
+```{r}
+cms_patient_experience |> 
+  pivot_wider(
+    id_cols = starts_with("org"), # we use both columns as id just to not widen them
+    names_from = measure_cd,
+    values_from = prf_rate
+  )
+```
+
+## Separating columns
+
+```{r}
+table3
+```
+
+```{r}
+table3 |> 
+  separate(col = rate, into = c("cases", "population"), sep = "/")
+```
+
+
+
+## Exercises 5
+
+1. Look at the table `billboard` that is included in `tidyr`. What is not tidy about it?
+
+```{r}
+billboard
+```
+
+2. Tidy the data
+3. The new table contains many missing values (`NA`s) explain why and if you should delete them
+4. Independently from whether it is the right thing to do or now: delete the `NA`s
+4. Why does this code fail?
+
+```{r}
+#| error: true
+table4a |>  
+  pivot_longer(c(1999, 2000), names_to = "year", values_to = "cases")
+```
+
+5. Make this into a tidy table
+
+```{r}
+preg <- tribble(
+  ~pregnant, ~male, ~female,
+  "yes",     NA,    10,
+  "no",      20,    12
+)
+```
+
+
+# Unnesting & Plucking
+## The problem
+
+:::: {.columns}
+
+::: {.column width="60%"}
+A huge problem in web scraping: **nested lists**:
+
+::: {.incremental}
+- tables are not always the best option for data storage or transfer
+- many APIs work with JSON files, which can be endlessly nested structures
+- bringing these into a tidy form is almost never straightforward
+- imagine you're searching an object hidden within the smallest matryoshka in an matryoshka store 
+:::
+:::
+::: {.column .cropped width="30%" }
+![](https://images.unsplash.com/photo-1716172874891-dd0454d5a27b?q=40&fit=crop&w=600&h=900){.cropped width="600px"}
+[Syria Polidoro](https://unsplash.com/@syria_polidoro) via unsplash.com
+:::
+::::
+
+## Unnesting
+
+For simple operations, unnesting, unlisting and binding can help:
+
+```{r}
+sports_results <- list(
+  name = "Alice",
+  age = 25,
+  scores = list(list(game1 = 85, game2 = 90, game3 = 88)),
+  details = list(list(address = "123 Main St", city = "Anytown"))
+)
+lobstr::tree(sports_results)
+```
+
+Unnesting:
+
+```{r}
+sports_results_df <- as_tibble(sports_results) |> 
+  unnest_longer(scores) |> 
+  unnest_longer(details)
+sports_results_df
+```
+
+We can now use our skills to tidy this up:
+
+```{r}
+players <- sports_results_df |> 
+  pivot_wider(id_cols = c(name, age, scores_id, scores), names_from = details_id, values_from = details) |> 
+  select(-scores_id, -scores)
+players
+
+games <- sports_results_df |> 
+  mutate(game = str_extract(scores_id, "\\d+")) |> 
+  select(name, scores, game)
+games
+```
+
+Unlisting:
+
+```{r}
+tibble(
+  name = sports_results$name,
+  age = sports_results$age,
+  game = names(unlist(sports_results$scores)),
+  scores = unlist(sports_results$scores)
+)
+```
+
+Binding is useful when the list already has the format of a data frame:
+
+```{r}
+list(
+  list(name = "Alice", age = 25),
+  list(name = "John", age = 24)
+) |> 
+  bind_rows()
+```
+
+Or if the list is really a list of data frames:
+
+```{r}
+list(
+  tibble(name = "Alice", age = 25),
+  tibble(name = "John", age = 24)
+) |> 
+  bind_rows()
+```
+
+## Plucking
+
+When nothing else helps, we need to pluck the values we want from the list:
+
+```{r}
+sports_results$details[[1]]$address
+```
+
+The tidyverse has a function for this:
+
+```{r}
+sports_results |> 
+  pluck("details", 1, "address")
+```
+
+It's main advantage is that you can define what happens if the object is not found:
+
+```{r}
+sports_results |> 
+  pluck("details", 1, "telephone", .default = NA_character_)
+```
+
+## Twitter data case study
+
+I pulled this messy data off the ESS Twitter page:
+
+```{r}
+ess_tweets <- readRDS("data/nested_ess.rds")
+```
+
+Let's try and have a look:
+
+```{r}
+ess_tweets |> 
+  lobstr::tree(max_length = 25)
+```
+
+```{r}
+#| eval: false
+View(ess_tweets)
+```
+
+## Twitter data case study: searching the store
+
+Since we already know that the data contains the latest Tweets, we can use a function I wrote to search for it in the data:
+
+```{r}
+parse_path <- function(ix) {
+  out <- as.list(ix$p)
+  out[which(ix$p == as.character(ix$pos))] <- ix$pos[ix$p == as.character(ix$pos)]
+  gsub("list(", "purrr::pluck(DATA, ", deparse1(out), fixed = TRUE)
+}
+
+#' Search a list
+#'
+#' @param l a list
+#' @param f a function to identify the element you are searching
+#'
+#' @return an object containing the searched element with the function to extract it as a name
+#' @export
+list_search <- function(l, f) {
+  
+  paths <- rrapply::rrapply(
+    object = l,
+    condition = f,
+    f = function(x, .xparents, .xname, .xpos) list(p = .xparents, n = .xname, pos = .xpos),
+    how = "flatten"
+  )
+  
+  out <- purrr::map(paths, function(p) purrr::pluck(l, !!!p$pos))
+  names(out) <- purrr::map_chr(paths, parse_path)
+  return(out)
+}
+```
+
+
+```{r}
+list_search(ess_tweets, \(x) str_detect(x, "Only one week to go until all our session three courses close!"))
+```
+
+## Twitter data case study: getting the right doll
+
+Going one level up from this tweet might contain more useful information:
+
+```{r}
+pluck(ess_tweets, "data", "user", "result", "timeline_v2", "timeline", "instructions", 3L, "entries", 3L, "content", "itemContent", "tweet_results", "result", "legacy") |> 
+  lobstr::tree(max_length = 25)
+```
+
+Looks like this is the entire tweet.
+Additionally, the part of the path called "entries" might suggest we can just extract all tweets relatively easily:
+
+```{r}
+entries <- pluck(ess_tweets, "data", "user", "result", "timeline_v2", "timeline", "instructions", 3L, "entries")
+lobstr::tree(entries, max_depth = 3, max_length = 25)
+```
+
+## Twitter data case study: cleaning up the mess
+
+It seems all of these entries are structured in the same way, which is a good sign.
+So hopefully we can just extract the content from the same position in all of them:
+
+```{r}
+tweets <- map(entries, function(x) pluck(x, "content", "itemContent", "tweet_results", "result", "legacy"))
+# alternatively, this produces the same outcome
+# tweets <- map(entries, c("content", "itemContent", "tweet_results", "result", "legacy"))
+lobstr::tree(tweets, max_depth = 2, max_length = 25)
+```
+
+Yes, these contain tweets!
+Although not all entries are actually populated with data, it seems.
+Nevertheless, we can turn this into a tidy table:
+
+```{r}
+tweets_df <- map(tweets, function(t) {
+  tibble(
+    id = t$id_str,
+    user_id = t$user_id_str,
+    created_at = t$created_at,
+    full_text = t$full_text,
+    favorite_count = t$favorite_count,
+    retweet_count = t$retweet_count,
+    bookmark_count = t$bookmark_count
+  )
+}) |> 
+  bind_rows()
+
+glimpse(tweets_df)
+```
+
+## Exercises 6
+
+1. The object below is a nested list with Game of Thrones characters. Tidy the data into a data.frame that contains at least name, gender, culture and birthday of each character
+
+```{r}
+got_characters <- repurrrsive::got_chars
+```
+
+2. From the `got_characters` object, also extract in which season(s) they appear, so that the data frame contains one row per season appearance (and still the same character information as above) 
+
+3. Sometimes, it makes sense to keep nested information around for later. The `got_characters` object contains aliases for the characters. Store them along the character name in a nested format, so that each row looks like this:
+
+```{r}
+tibble(
+  name = "Theon Greyjoy",
+  aliases = list(c("Prince of Fools", "Theon Turncloak", "Reek", "Theon Kinslaye"))
+)
+```
+
+4. The object below contains someone's music collection. Create a tidy table of the artist this person listens to:
+
+```{r}
+music_collection <- repurrrsive::discog
+```
+
+5. Now add the title of the songs to the artists table
+
+
+# Wrap Up
+
+Save some information about the session for reproducibility.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show Session Info"
+sessionInfo()
+```
+
+<!-- This is just some extra CSS code to make the included Markdown tables pretty -->
+```{css}
+.table-striped {
+  > tbody > tr:nth-of-type(odd) > * {
+    background-color: #fff9ce;
+  }
+}
+.table-hover {
+  > tbody > tr:hover > * {
+    background-color: #ffe99e; /* Adjust this color as needed */
+  }
+}
+```
+
+# References
