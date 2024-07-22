@@ -1,0 +1,863 @@
+---
+title: "Session 3:	Working with Files"
+subtitle: "ESS: Introduction to Web Scraping and Data Management for Social Scientists"
+author: "Johannes B. Gruber"
+date: 2024-07-24
+from: markdown+emoji
+format:
+  revealjs:
+    smaller: true
+    width: 1600
+    height: 900
+    scrollable: true
+    code-line-numbers: true
+    slide-number: c/t
+    logo: ../ess_logo.png
+    embed-resources: true
+bibliography: ../references.bib
+execute:
+  cache: true
+  echo: true
+engine: knitr
+highlight-style: nord
+---
+
+# Introduction
+## This Course
+
+<center>
+```{r setup}
+#| echo: false
+#| message: false
+library(tinytable)
+library(tidyverse)
+tibble::tribble(
+  ~Day, ~Session,
+  1,  "Introduction",
+  2,  "Data Structures and Wrangling",
+  3,  "Working with Files",
+  4,  "Linking and joining data & SQL",
+  5,  "Scaling, Reporting and Database Software",
+  6,  "Introduction to the Web",
+  7,  "Static Web Pages",
+  8,  "Application Programming Interface (APIs) ",
+  9,  "Interactive Web Pages",
+  10, "Building a Reproducible Research Project",
+) |> 
+  tt() |> 
+  style_tt() |> 
+  style_tt(i = 3, background = "#FDE000")
+```
+</center>
+
+## The Plan for Today
+
+:::: {.columns}
+
+::: {.column width="60%"}
+In this session, you learn:
+
+- how to use files efficiently and how to solve problems using files
+- good practices for transparent and efficient file usage
+- how to work with many files at the same time
+- and how you can facilitate collaborative working with files
+:::
+
+::: {.column width="30%" }
+![](https://images.unsplash.com/photo-1541362036326-097742faf412?q=80&w=2576&auto=format&fit=crop)
+[JF Martin](https://unsplash.com/@numericcitizen) via unsplash.com
+:::
+
+::::
+
+# Files
+## What are files
+
+- during analysis, your data resides in memory
+- when the R is closed, the memory is emptied
+- data then needs to be stored in a file (or files) on your disk/network/cloud (or a database)
+- there are many different file types, some better suited for data storage than others (e.g., JPEG vs. XLSX)
+
+## Let's get some files
+
+```{r}
+if (!dir.exists("data/files")) {
+  dir.create("data", showWarnings = FALSE)
+  # download the zip file containing the data from Weidmann (2023)
+  if (!file.exists("data/main.zip")) {
+    curl::curl_download(
+      url = "https://github.com/nilsbw/dmbook-setup/archive/refs/heads/main.zip", 
+      destfile = "data/main.zip"
+    )
+  }
+  # extract the archive
+  unzip("data/main.zip", exdir = "data")
+  # we are only interested in the files for chapter 4, so we move them up
+  file.rename("data/dmbook-setup-main/ch04", "data/files")
+  # now we can clean up
+  unlink("data/dmbook-setup-main", recursive = TRUE)
+}
+```
+
+Now let's have a look:
+
+```{r}
+list.files("data/files")
+```
+
+## Operating system shenanigans
+
+Windows and macOS annoyingly hide file extensions.
+I generally recommend you change that:
+
+:::: {.columns}
+::: {.column width="60%"}
+### Windows
+
+[![](https://help.autodesk.com/sfdcarticles/img/0EM3g000000e60L)](https://www.autodesk.com/support/technical/article/caas/sfdcarticles/sfdcarticles/How-to-enable-hidden-file-extensions-in-Windows.html){target="_blank"}
+:::
+
+::: {.column width="30%" }
+### macOS
+
+[![](https://media.idownloadblog.com/wp-content/uploads/2023/05/Show-all-filename-extensions-in-Finder-on-Mac-768x545.jpg)](https://www.idownloadblog.com/2023/05/23/how-to-show-hide-filename-extensions-mac/){target="_blank"}
+:::
+::::
+
+
+
+## Plain text vs. binary files
+
+Basic difference between file types:
+
+:::: {.columns}
+::: {.column width="50%"}
+- some contain information stored as *plain text*
+
+![](media/plain-text.png)
+:::
+::: {.column width="50%"}
+- some are *binary* files that need to be interpreted by a program
+
+![](media/binary.png)
+:::
+::::
+
+
+
+## Encoding
+
+:::: {.columns}
+::: {.column width="50%"}
+- Binary files contain some meta information on how they should be interpreted. Plain text files **do not**
+- What specific bytes represent which character is defined in the *file encoding*
+- Unfortunately, there are **different standards** (e.g., UTF-8, ASCII, Windows-1252)
+- The file itself gives no hint what encoding it uses :crying_cat_face:
+:::
+
+::: {.column width="50%" }
+![](https://images.unsplash.com/photo-1435575709442-063fe08e935f?q=40&fit=crop)
+
+[Verne Ho](https://unsplash.com/@verneho) via unsplash.com
+:::
+::::
+
+## Encoding: experiment
+
+This file is encoded in UTF-8, which R expects:
+
+```{r}
+readLines("data/files/un-secretaries.txt")
+```
+
+Dag Hammarskjöld and António Guterres have names with letters that do not exist in the English alphabet and thus do not exist in the American Standard Code for Information Interchange (ASCII), one of the oldest encoding standards.
+
+If we try to open the other file, where someone saved the same data, but with a different encoding:
+
+```{r}
+readLines("data/files/un-secretaries-ascii.txt")
+```
+
+## Encoding: pitfall
+
+A common mishap is that people using Microsoft Windows use this program to open text files:
+
+![](https://upload.wikimedia.org/wikipedia/en/4/44/Windows_Notepad.png)
+
+It has the very annoying habit of forcing a different encoding.
+
+```{r}
+file.copy("data/files/un-secretaries.txt", "data/files/un-secretaries_win.txt")
+```
+
+Let's open this file with Notepad, do nothing and just save it (or open it in RStuido and use `File` -> `Save with Encoding`)
+
+```{r}
+readLines("data/files/un-secretaries_win.txt")
+```
+
+## Encoding: pitfall
+
+You can sometimes return from something like that, but it's almost never straightforward.
+We can guess the encoding based on some patterns in the text:
+
+```{r}
+readr::guess_encoding("data/files/un-secretaries_win.txt")
+# ISO-8859-1 is an alias for windows-1252
+```
+
+And can either convert the input or use a function that can work with different encodings:
+
+```{r}
+readLines("data/files/un-secretaries_win.txt") |>
+  stringi::stri_encode(from = "ISO-8859-1", to = "UTF-8")
+
+readr::read_csv(file = "data/files/un-secretaries_win.txt", locale = readr::locale(encoding = "ISO-8859-1"))
+```
+
+## File formats for tabular data: CSV
+
+:::: {.columns}
+::: {.column width="50%"}
+::: {.incremental}
+- Comma-Separated Values (CSV) 
+- plain text file
+- data must be perfectly rectangular (each line must have the same number of cells)
+- many functions to read (and write) CSV files: `read.csv`, `readr::read_csv`, `data.table::fread`
+:::
+:::
+::: {.column width="50%" }
+```{r}
+readLines("data/files/csv-example.csv") |> 
+  head(15)
+```
+
+```{r}
+#| classes: fragment
+rio::import("data/files/csv-example.csv")
+```
+
+:::
+::::
+
+
+## File formats for tabular data: CSV  {visibility="uncounted"}
+
+:::: {.columns}
+::: {.column width="50%"}
+::: {.incremental}
+- like encoding: no single standard for CSV files
+  + semicolon separators
+  + comma in cells might be interpreted as separator
+- downside :heavy_minus_sign::
+  + no meta-information about encoding, separators, quoting
+- advantages :heavy_plus_sign::
+  + open format that is completely transparent
+  + general compatibility with data processing and analysis tools
+  + most commonly used file types for data storage (network effect)
+:::
+:::
+::: {.column width="50%" }
+```{r}
+readLines("data/files/csv-example-semicolon.csv") |> 
+  head(15)
+```
+
+```{r}
+readLines("data/files/csv-example-quotes.csv") |> 
+  head(15)
+```
+:::
+::::
+
+## File formats for tabular data: Excel
+
+:::: {.columns}
+::: {.column width="50%"}
+::: {.incremental}
+- two types: XLS (legacy XML format) or XLSX (really an archive) 
+- binary file type of MS Excel
+- does not impose a strict tabular structure
+- one column can contain several data types (character, numeric, date)
+- each file can contain several sheets
+- many functions to read (and write) Excel files: `readxl::read_xls`/`readxl::read_xlsx`, `openxlsx::read.xlsx`, `data.table::fread`
+:::
+:::
+::: {.column width="50%" }
+```{r}
+readLines("data/files/csv-example.csv") |> 
+  head(15)
+```
+
+```{r}
+#| classes: fragment
+rio::import("data/files/csv-example.csv")
+```
+
+:::
+::::
+
+## File formats for tabular data: Stata & SPSS
+
+:::: {.columns}
+::: {.column width="50%"}
+::: {.incremental}
+- .dta are used by Stata
+- .sav are used by SPSS
+- You encounter them when someone in your team works with these programs
+- Fortunately, the `haven` package has no issue dealing with them and `rio` provides a nice consistent interface
+- When you look at the objects with `View()`, you even get the labels from Stata/SPSS under the column names (you can also use `labelled::var_label(stata_dat$orgage)` or `attributes(stata_dat$orgage)`)
+- advantages :heavy_plus_sign::
+  + you can work with your team
+- downside :heavy_minus_sign::
+  + not particularly well suited for data
+  + not really used by any other programs
+:::
+:::
+::: {.column width="50%" }
+```{r}
+stata_dat <- rio::import("data/files/terrorism-targets.dta")
+rio::export(stata_dat, "data/files/terrorism-targets2.dta")
+stata_dat
+```
+
+```{r}
+spss_dat <- rio::import("data/files/journalism.sav")
+rio::export(spss_dat, "data/files/journalism2.sav")
+spss_dat
+```
+:::
+::::
+
+
+## RData & RDS
+
+:::: {.columns}
+::: {.column width="50%"}
+::: {.incremental}
+- `R`'s own file formats
+- R Data: 
+  + .RData or .rda extensions
+  + can contain several objects *with their names* :flushed:
+- "serialized" RData: 
+  + .rds file extension
+  + contains one object without a name
+- advantages :heavy_plus_sign::
+  + extremely flexible
+  + pretty fast and/or efficient way to store data
+- downside :heavy_minus_sign::
+  + not really used by any other programs
+:::
+:::
+::: {.column width="50%" }
+```{r}
+load("data/files/leaders-twitter.Rdata")
+save("elites.data", file = "data/files/leaders-twitter2.Rdata")
+str(elites.data, give.head = T)
+```
+
+```{r}
+saveRDS(elites.data, file = "data/files/leaders-twitter.rds")
+elites_twitter <- readRDS("data/files/leaders-twitter.rds")
+```
+:::
+::::
+
+## JSON
+
+:::: {.columns}
+::: {.column width="50%"}
+::: {.incremental}
+- JavaScript Object Notation (JSON)
+- plain text file
+- two standards to save the same .json file type
+  + JSON Lines: one record per line, like a csv (use `jsonlite::stream_in()`)
+  + JSON: all records in one JSON string (use `jsonlite::fromJSON(`)
+- advantages :heavy_plus_sign::
+  + very flexible beyond tabular data
+  + widely used on the internet
+- downside :heavy_minus_sign::
+  + allows for mind bending complexity (as we've seen yesterday)
+:::
+:::
+::: {.column width="50%" }
+```{r}
+json_file <- repurrrsive::gh_repos_json()
+gh_repos <- jsonlite::fromJSON(json_file, simplifyDataFrame = FALSE)
+gh_repos |> 
+  lobstr::tree(max_length = 20)
+```
+
+```{r}
+jsonlite::stream_out(elites.data$UK, file("data/elites_data_UK.json"))
+readLines("data/elites_data_UK.json") |> 
+  head() |> 
+  cat()
+```
+
+:::
+::::
+
+
+## Excercises 1
+
+1. Download the file from this address into the "data" folder and name it "internet_usage.xlsx" using R: <https://api.worldbank.org/v2/en/indicator/IT.NET.USER.ZS?downloadformat=excel>
+2. Reproduce this plot (hint: you can get grey out cases with `gghighlight`):
+
+![](media/individuals-using-the-internet.png)
+
+3. I created a terrible CSV file. Try to read it in anyway: "data/csv-bad-example.csv"
+4. Even when you manage to read in the file, the table still has issue. Explain what they are and how to correct them (hint: look at the data types of the columns)
+
+# Transparent and efficient use of files
+## Directory Structure
+
+@weidmann_data_2023 suggest that your research project should have this directory structure:
+
+- **raw/**
+  + What lives here: raw data you collected yourself or that comes from other sources
+  + What to do with the content: read only!
+- **analysis/**
+  + What lives here: cleaned/intermediate/analysis data and the analysis scripts that produced them
+  + What does not live here: data that can't be recreated from the raw data with the analysis scripts
+  + What to do with the content: read input data and write intermediate data; produce analysis results
+- **replication/**
+  + What lives here: properly anonymized, cleaned data that is ready to be shared with others
+  + What to do with the content: write-only (at the end of a project)
+
+
+::: {.notes}
+experience shows that once you take a break from a project, it can be
+difficult to make sense of the different files in your project
+:::
+
+## Directory Structure
+
+
+:::: {.columns}
+::: {.column width="60%"}
+I find this structure more sensible:
+
+- **data/**
+  + What lives here: all raw data and intermediate data
+  + What to do with the content: write data produced with an analysis script from a previous version of the data
+- **analysis/**
+  + What lives here: the RMD/Quarto files that clean, wrangle, and analyse the data
+  + What does not live here: data
+  + What to do with the content: execute the files to take a step in the data analysis pipeline
+- **communication/**
+  + What lives here: presentations and paper(s) communicating the results or status of your project
+- **readme**: explains how everything belongs together
+:::
+
+::: {.column width="30%" }
+My preferred data structure:
+
+```
+my_awsome_paper
+├── analysis
+│   ├── 01._ingest-and-clean.qmd
+│   ├── 02._annotation.qmd
+│   └── 03._visualisationa-and-modelling.qmd
+├── communication
+│   ├── paper.qmd
+│   └── slides.qmd
+├── data
+│   ├── 00._raw.csv
+│   ├── 01._clean.rds
+│   ├── 02._annotated.rds
+│   └── 03._final.rds
+└── readme.md
+
+4 directories, 10 files
+
+```
+:::
+::::
+
+## Projects and relative paths
+
+Specifically RStudio projects are a good way to organise your data, analysis scripts and academic output.
+This does not change your workflow dramatically, but makes your projects *portable* (and easier to back up).
+When working in a project, you can reference data by it's relative position to the project's main folder.
+This will mean that if the folder is copied to a different location, all your code will still run.
+The best example is the project we are in now.
+
+This will work on your computer:
+
+```{r}
+#| eval: false
+plenary_speeches_raw <- rio::import("data/files/csv-example.csv")
+```
+
+This won't, even though it works on my machine :stuck_out_tongue::
+
+```{r}
+#| eval: false
+plenary_speeches_raw <- rio::import("/home/johannes/GitHub/ess-v2-web-scraping-data-management/03_Working_with_Files/data/files/csv-example.csv")
+```
+
+RStudio projects are not really necessary for this, especially given that Quarto sets the working directory of your documents to it's source location by default.
+But the idea of keeping everything together can save you a lot of time otherwise spent on debugging issues (your own or these of others).
+
+
+## File names
+
+:::: {.columns}
+::: {.column width="60%"}
+File names should be:
+
+- machine-readable
+- human-readable
+- sort well
+
+::: {.incremental}
+- start with a number (should lead with 0 if necessary)
+- do not use capitalisation (file names are treated differently on Windows)
+- no whitespace: use `_` to separate parts of the name (number, step, etc); use `-` to separate words ("ingest and clean")
+:::
+:::
+::: {.column width="30%" }
+```
+my_awsome_paper
+├── analysis
+│   ├── 01._ingest-and-clean.qmd
+│   ├── 02._annotation.qmd
+│   └── 03._visualisationa-and-modelling.qmd
+├── communication
+│   ├── paper.qmd
+│   └── slides.qmd
+├── data
+│   ├── 00._raw.csv
+│   ├── 01._clean.rds
+│   ├── 02._annotated.rds
+│   └── 03._final.rds
+└── readme.md
+
+4 directories, 10 files
+
+```
+:::
+
+::::
+
+## Make Files
+
+For example, GNU Make is a tool which controls the generation of executables and other non-source files of a program from the program's source files.
+It implements a paradigm that can be very useful in projects:
+
+1. The make file contains the order in which results are built from the raw files: that is data and analysis scripts
+2. When running the make command, make checks which files are up to date and which ones need (re-)building
+
+Make files can help you keep track of your ongoing projects by making sure all files that depend on each other are up to data.
+You can check out the [{targets} R package](https://books.ropensci.org/targets/), which implements some advanced control over your projects and some nice visualisations.
+But the basic idea is simple:
+
+![](media/analysis-pipeline.png)
+
+## Make Files {visibility="uncounted"}
+
+Say you found an issue in your pre-processing.
+You fix the issue and re-run the pre-processing script.
+But what else needs to be fixed?
+From the perspective of make, everything in the flowchart above after the pre-processing step needs to be rebuilt.
+If you name your files in a sensible way and record the order of things, that should be no problem.
+You can use a little functions that implements make-like processing
+
+```{r}
+make_quarto <- function(files, 
+                        destfiles = NULL, 
+                        output_ext = ".html", 
+                        ...) {
+  
+  if (is.null(destfiles)) destfiles <- paste0(tools::file_path_sans_ext(files), output_ext)
+  
+  # the oldest file should be the first source file, I record the first destfile, since it should be newer
+  t <- file.info(destfiles[1])$ctime
+  
+  for (i in seq_along(files)) {
+    if (
+      # render file if source is newer than destination
+      isTRUE(file.info(files[i])$ctime >= file.info(destfiles[i])$ctime) || 
+      # or if output is NOT newer than previous destination file
+      !isTRUE(file.info(destfiles[i])$ctime >= t) 
+    ) {
+      cli::cli_progress_step("Making {destfiles[i]}.")
+      quarto::quarto_render(
+        input = files[i],
+        output_file = destfiles[i]
+      )
+      cli::cli_progress_done()
+    } else {
+      cli::cli_inform(c("v" = "{destfiles[i]} already up to date."))
+    }
+    t <- file.info(destfiles[i])$ctime
+  }
+  
+}
+```
+
+This is very barebones compared to the `targets` package, but I never really needed any of the other functions.
+Mostly I have been using the actual GNU make, but it's syntax is quite different from other programs and it is not installed by default on Windows.
+
+
+## Excercise 2
+
+1. set up a directory for your research project and fill it with the mock data and analysis files you imagine you need
+2. write a readme file that contains documentation of your file structure 
+3. Present it to the class
+
+
+# Working with many files at the same time
+## Reading multiple files
+
+Let's say your data is spread over several files:
+
+```{r}
+dataset_files <- list.files("data/files", pattern = ".csv$", full.names = TRUE)
+dataset_files
+```
+
+You can read in one file without an issue:
+
+```{r}
+rio::import(dataset_files[1])
+```
+
+But how do you read in several?
+
+## Reading multiple files {visibility="uncounted"}
+
+1. Get file names in one vector
+
+```{r}
+dataset_files <- list.files("data/files", pattern = ".csv$", full.names = TRUE)
+dataset_files
+```
+
+2. Define reading function
+
+```{r}
+read_dat <- function(x) {
+  rio::import(x)
+}
+```
+
+3. Loop over files
+
+```{r}
+dataset_list <- map(dataset_files, read_dat)
+```
+
+4. Bind into one table
+
+```{r}
+#| error: true
+bind_rows(dataset_list)
+```
+
+-> change the `read_dat` function until all data frames are the same
+
+```{r}
+#| classes: fragment
+#| eval: false
+read_dat <- function(x) {
+  rio::import(x) |> 
+    mutate(kmdist = str_replace(kmdist, ",", "."),
+           midist = str_replace(midist, ",", ".")) |> 
+    mutate(kmdist = as.numeric(kmdist),
+           midist = as.numeric(midist))
+}
+map(dataset_files, read_dat) |> 
+  bind_rows()
+```
+
+## Files as databases: Why?
+
+::: {.incremental}
+- when working with larger datasets, the available memory of your computer becomes an issue
+- "big data" is often defined as datasets larger than your memory
+- in these cases you have three choices
+
+1. Let each file Quarto file do less (you don't have to have different slightly different objects)
+2. Chunk your analysis. Often, you can perform analysis or pre-processing on one subset of the data after the other and combine the results
+3. Get better hardware or use cloud computing (both are expensive, [but possible](https://cloudyr.github.io/packages/index.html))
+:::
+
+## Files as databases: How?
+
+Let's have a look at 2. since it might not be entirely clear.
+Let's get a big file first:
+
+```{r hoc_import}
+#| cache-lazy: false
+corp_hoc <- "data/Corp_HouseOfCommons_V2.rds"
+if (!file.exists(corp_hoc)) {
+  library(dataverse)
+  Sys.setenv("DATAVERSE_SERVER" = "dataverse.harvard.edu")
+  # get dataset by doi
+  ds <- get_dataset("doi:10.7910/DVN/L4OAKN")
+  # you can inspect that object with
+  # as_tibble(ds[["files"]][, c("label", "id")])
+  
+  url <- get_file(3758859L, 
+                  dataset = "doi:10.7910/DVN/ZY3RV7",
+                  return_url = TRUE)
+  
+  
+  curl::curl_download(url, destfile = corp_hoc, quiet = FALSE)
+}
+corp_hoc_df <- readRDS(corp_hoc) |> 
+  mutate(date = as.Date(date))
+```
+
+Let's say this was not stored as one file, but a colelction of CSV files:
+
+```{r hoc_export}
+#| cache-lazy: false
+if (!dir.exists("data/house_of_commons")) {
+  # I split this into file just for demonstration puposes
+  corp_hoc_list <- split(corp_hoc_df, corp_hoc_df$party)
+  dir.create("data/house_of_commons")
+  for (party in names(corp_hoc_list)) {
+    rio::export(corp_hoc_list[[party]], paste0("data/house_of_commons/", party, ".csv"))
+  }
+}
+list.files("data/house_of_commons")
+```
+
+## Files as databases: How?  {visibility="uncounted"}
+
+We could read all of them in and combine them, like above.
+Or we can use `arrow` to treat them as a database:
+
+```{r}
+#| cache-lazy: false
+library(arrow)
+corp_hoc_con <- open_dataset(sources = "data/house_of_commons",
+                             format = "csv")
+```
+
+The `corp_hoc_con` is way smaller than the actual data object:
+
+```{r}
+#| cache-lazy: false
+object.size(corp_hoc_con)
+object.size(corp_hoc_df) |> 
+  format(units = "MB")
+```
+
+Yet we can still treat it like a normal data.frame:
+
+```{r}
+#| cache-lazy: false
+corp_hoc_con |> 
+  mutate(date = as.Date(date)) |> 
+  filter(date >= "2000-01-01",
+         date < "2001-01-01") |> 
+  select(party) |> 
+  collect() |> 
+  count(party, sort = TRUE)
+```
+
+The only difference is that we have to call collect at some point, to load the data into memory.
+Since we can filter it though, the memory footprint will still be much smaller.
+We could also 
+
+## Exercises 3
+
+1. When might it make sense to treat a folder full of files as a database?
+2. When could it make sense to save data in an arrow database full of csv files?
+3. `arrow` also supports a file format called Parquet. Using it instead of CSV files increases speed and reduces file sizes, while it is also widely used by other languages and programs. Create a new folder where you store the Houses of Commons data in one file per speaker (hint read `?arrow::write_parquet` first).
+4. Connect to the "database" of Parquet files and make a plot showing how many entries there are over the years per party.
+
+# Collaborative working
+## Git
+
+- git was developed for collaborative work on software
+- it is excellently suited for research projects as well!
+- you can get a free Github premium account with your university address
+- this enables you to have private repositories (otherwise all repositories are public)
+
+## Google Sheets
+
+Google sheets is a free service by Google--which can be controlled from R!
+
+```{r}
+#| eval: false
+library(googlesheets4)
+# write
+write_sheet(gss_cat, "gs4-test")
+# read
+cats_df <- read_sheet("https://docs.google.com/spreadsheets/d/1XdqfPXrZCTim156m8SteKG_teOgj9AJLcAHOMrV_wfI/edit?usp=sharing")
+# update
+cats_df_updated <- cats_df |> 
+  add_case(
+    year = 2000,
+    marital = "Never married", 
+    age = 26, 
+    race = "White", 
+    rincome = "$8000 to 9999", 
+    partyid = "Ind,near rep", 
+    relig = "Protestant", 
+    denom = "Southern baptist", 
+    tvhours = 12
+  )
+write_sheet(cats_df_updated, ss = "https://docs.google.com/spreadsheets/d/1XdqfPXrZCTim156m8SteKG_teOgj9AJLcAHOMrV_wfI/edit?usp=sharing", sheet = "gss_cat_updated")
+```
+
+## Data storage alternatives
+
+1. Whatever your university provides
+2. Dropbox, OneDrive, Box, etc
+3. Self hosted services like Nextcloud, Owncloud, etc.
+
+Pitfalls:
+
+- always back up your data (3-2-1 backup strategy)!
+- think about who you give access
+- make sure to not work on the same file at the same time as someone else
+
+:::{.notes}
+3 copies of your data
+2 different media
+1 copy off-site for disaster recovery
+:::
+
+## Exercises 4
+
+1. If you have a Google account, try to upload and download some data to Google Sheets
+
+# Wrap Up
+
+Save some information about the session for reproducibility.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show Session Info"
+sessionInfo()
+```
+
+
+<!-- This is just some extra CSS code to make presentation look pretty -->
+```{css}
+#| echo: false
+.table-striped {
+  > tbody > tr:nth-of-type(odd) > * {
+    background-color: #fff9ce;
+  }
+}
+.table-hover {
+  > tbody > tr:hover > * {
+    background-color: #ffe99e; /* Adjust this color as needed */
+  }
+}
+.reveal section img { 
+    background: rgba(255, 255, 255, 0.12); 
+    border: 4px solid #eeeeee;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.15) 
+}
+```
+
+
+# References
