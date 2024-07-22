@@ -11,8 +11,8 @@ This is the course material for the Essex Summer School in Social Science Data A
 | time   | Session                                  |
 |--------|------------------------------------------|
 | Day 1  | Introduction                             |
-| Day 2  | Basic Data Structures                    |
-| Day 3  | Importing and Wrangling Data             |
+| Day 2  | Data Structures and Wrangling            |
+| Day 3  | Working with Files                       |
 | Day 4  | Linking and joining data & SQL           |
 | Day 5  | Scaling, Reporting and Database Software |
 | Day 6  | Introduction to the Web                  |
@@ -39,10 +39,14 @@ source("https://gist.githubusercontent.com/JBGruber/28c79af6d5f9015370feef31da2c
 get_old_packages()
 ```
 
-After cloning this repository to your computer, you can install all required R packages with the code below. But you can do this after the first day (when we discuss how you work with GitHub):
+After cloning this repository to your computer, you can install all required R packages with the code below.
+But you can do this after the first day (when we discuss how you work with GitHub):
 
 ``` r
 if (!requireNamespace("rlang", quietly = TRUE)) install.packages("rlang", dependencies = TRUE)
 rlang::check_installed("attachment")
+# install some experimental packages
+if (!rlang::is_installed("paperboy")) remotes::install_github("JBGruber/paperboy")
+if (!rlang::is_installed("playwrightr")) remotes::install_github("JBGruber/playwrightr")
 rlang::check_installed(attachment::att_from_qmds(path = ".", recursive = TRUE))
 ```
