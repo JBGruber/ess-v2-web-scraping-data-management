@@ -560,7 +560,7 @@ Note: You can interject the `View()` command at any line in a complicated pipeli
 
 ## Exercises 2
 
-1. Run ggplot(data = mpg). What do you see and why?
+1. Run ggplot(data = mtcars). What do you see and why?
 2. In the function `pb_collect()` from `paperboy`, what do the arguments `ignore_fails` and `connections` do?
 3. Write a function that takes a numeric vector of miles per gallon consumption data and transforms it to kilometer per liter. If anything other than a numeric vector is entered, the function should display an error (hint: see ?stop).
 4. In the code below, check the sizes of the intermediate objects with `object.size()`.
