@@ -120,7 +120,7 @@ Can be broadly separated into three steps [@weidmann_data_2023]:
 - Good Data Processing strategies will let you sleep easy at night:
   + *manageable*: Avoiding the REAL drudge work of hand-cleaning data by building pipelines to automate
   + *scalable*: Extending your data collection to new cases and scopes is easy
-  + *transparent*: It will to communicate (or remember) later
+  + *transparent*: It will be easy to communicate (or remember) later
   + *robust*: It won't fail if you draw out a JENGA stone
 :::
 
@@ -388,7 +388,7 @@ country_df <- tibble(input = data_input) |>
   filter(input != "") |> 
   mutate(
     country     = str_extract(input, "^.+?(?= is)"),
-    inhabitants = str_extract(input, "\\d+? million|[0-9,]+?(?= inhabitants)"),
+    inhabitants = str_extract(input, "\\d+? million|\\d+\\.\\d+? million|[0-9,]+?(?= inhabitants)"),
     capital     = str_extract(input, "(?<=capital is ).+?(?=\\,)"),
     founded     = str_extract(input, "\\d{1,2} [A-z]+ \\d{3,4}")
   ) |> 
@@ -560,7 +560,7 @@ country_df_clean <- country_df |>
 1. From the `airports` table in the `nycflights13` package, access all airports that are in the Los Angeles time zone:
 
 ```{r}
-nycflights13::airports
+airports <- nycflights13::airports
 ```
 
 2. Access the `faa` of the airport at latitude 40.87522 and longitude -74.28136
@@ -634,7 +634,7 @@ ggplot(bad_table) +
 - This form of a table is called a *long* table
 - Easy to add or remove observations
 - Most statistical tools are built for this table
-- Operations in `R` (and especially in the `tidyverse`) are not much easier
+- Operations in `R` (and especially in the `tidyverse`) are now much easier
 :::
 :::
 ::: {.column width="50%" }
@@ -785,7 +785,7 @@ Tidyverse got its name from the idea of *tidy* data, which is defined as [@wickh
 Any other form of data is by definition *messy data*.
 This is essentially the same definition like we've seen above: tidy data = good table.
 
-## Indetify the tidy Data
+## Indentify the tidy Data
 
 :::: {.columns}
 
@@ -1132,7 +1132,7 @@ list_search <- function(l, f) {
 
 
 ```{r}
-list_search(ess_tweets, \(x) str_detect(x, "Only one week to go until all our session three courses close!"))
+list_search(ess_tweets, function(x) str_detect(x, "Only one week to go until all our session three courses close!"))
 ```
 
 ## Twitter data case study: getting the right doll

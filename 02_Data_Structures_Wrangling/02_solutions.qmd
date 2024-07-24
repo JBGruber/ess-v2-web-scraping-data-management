@@ -1,0 +1,326 @@
+---
+title: "solutions session 2"
+format: html
+---
+
+## Exercises 3
+
+1. replace all whitespace characters in the country columns of `country_df` with underscores (`_`)
+
+```{r}
+# I saved country_df data.frame from the main qmd file and import it here. We will learn how this works in session 3
+country_df <- readRDS("data/country_df.rds")
+```
+
+```{r}
+country_df |> 
+  mutate(    # with mutate, we can change one of multiple columns or create new ones
+    country = str_replace_all(country, "\\s", "_")
+  )
+```
+
+
+2. remove all punctuation from the `data_input` vector
+
+```{r}
+data_input <- "
+Albania is a country with 2.8 million inhabitants, its capital is Tirana, and it was founded on 28 November 1912.
+Andorra is a country with 77,000 inhabitants, its capital is Andorra la Vella, and it was founded on 8 September 1278.
+Austria is a country with 8.9 million inhabitants, its capital is Vienna, and it was founded on 12 November 1918.
+Belarus is a country with 9.5 million inhabitants, its capital is Minsk, and it was founded on 25 August 1991.
+Belgium is a country with 11.5 million inhabitants, its capital is Brussels, and it was founded on 4 October 1830.
+Bosnia and Herzegovina is a country with 3.3 million inhabitants, its capital is Sarajevo, and it was founded on 1 March 1992.
+Bulgaria is a country with 6.9 million inhabitants, its capital is Sofia, and it was founded on 22 September 1908.
+Croatia is a country with 4 million inhabitants, its capital is Zagreb, and it was founded on 25 June 1991.
+Cyprus is a country with 1.2 million inhabitants, its capital is Nicosia, and it was founded on 16 August 1960.
+Czech Republic is a country with 10.7 million inhabitants, its capital is Prague, and it was founded on 1 January 1993.
+Denmark is a country with 5.8 million inhabitants, its capital is Copenhagen, and it was founded on 5 June 1849.
+Estonia is a country with 1.3 million inhabitants, its capital is Tallinn, and it was founded on 20 August 1991.
+Finland is a country with 5.5 million inhabitants, its capital is Helsinki, and it was founded on 6 December 1917.
+France is a country with 67 million inhabitants, its capital is Paris, and it was founded on 22 September 1792.
+Germany is a country with 83 million inhabitants, its capital is Berlin, and it was founded on 3 October 1990.
+Greece is a country with 10.4 million inhabitants, its capital is Athens, and it was founded on 25 March 1821.
+Hungary is a country with 9.6 million inhabitants, its capital is Budapest, and it was founded on 23 October 1989.
+Iceland is a country with 366,000 inhabitants, its capital is Reykjavik, and it was founded on 17 June 1944.
+Ireland is a country with 5 million inhabitants, its capital is Dublin, and it was founded on 6 December 1922.
+Italy is a country with 60 million inhabitants, its capital is Rome, and it was founded on 17 March 1861.
+Kosovo is a country with 1.8 million inhabitants, its capital is Pristina, and it was founded on 17 February 2008.
+Latvia is a country with 1.9 million inhabitants, its capital is Riga, and it was founded on 18 November 1918.
+Liechtenstein is a country with 39,000 inhabitants, its capital is Vaduz, and it was founded on 23 January 1719.
+Lithuania is a country with 2.8 million inhabitants, its capital is Vilnius, and it was founded on 11 March 1990.
+Luxembourg is a country with 634,000 inhabitants, its capital is Luxembourg City, and it was founded on 9 June 1815.
+Malta is a country with 514,000 inhabitants, its capital is Valletta, and it was founded on 21 September 1964.
+Moldova is a country with 2.6 million inhabitants, its capital is Chișinău, and it was founded on 27 August 1991.
+Monaco is a country with 39,000 inhabitants, its capital is Monaco, and it was founded on 8 January 1297.
+Montenegro is a country with 622,000 inhabitants, its capital is Podgorica, and it was founded on 3 June 2006.
+Netherlands is a country with 17.4 million inhabitants, its capital is Amsterdam, and it was founded on 26 July 1581.
+North Macedonia is a country with 2.1 million inhabitants, its capital is Skopje, and it was founded on 8 September 1991.
+Norway is a country with 5.4 million inhabitants, its capital is Oslo, and it was founded on 7 June 1905.
+Poland is a country with 38 million inhabitants, its capital is Warsaw, and it was founded on 11 November 1918.
+Portugal is a country with 10.3 million inhabitants, its capital is Lisbon, and it was founded on 5 October 1143.
+Romania is a country with 19 million inhabitants, its capital is Bucharest, and it was founded on 1 December 1918.
+Russia is a country with 144 million inhabitants, its capital is Moscow, and it was founded on 12 June 1990.
+San Marino is a country with 34,000 inhabitants, its capital is San Marino, and it was founded on 3 September 301.
+Serbia is a country with 6.7 million inhabitants, its capital is Belgrade, and it was founded on 5 June 2006.
+Slovakia is a country with 5.4 million inhabitants, its capital is Bratislava, and it was founded on 1 January 1993.
+Slovenia is a country with 2.1 million inhabitants, its capital is Ljubljana, and it was founded on 25 June 1991.
+Spain is a country with 47 million inhabitants, its capital is Madrid, and it was founded on 6 December 1978.
+Sweden is a country with 10.4 million inhabitants, its capital is Stockholm, and it was founded on 6 June 1523.
+Switzerland is a country with 8.3 million inhabitants, its capital is Bern, and it was founded on 12 September 1848.
+Ukraine is a country with 41 million inhabitants, its capital is Kyiv, and it was founded on 24 August 1991.
+United Kingdom is a country with 67 million inhabitants, its capital is London, and it was founded on 1 January 1801.
+Vatican City is a country with 825 inhabitants, its capital is Vatican City, and it was founded on 11 February 1929.
+"
+```
+
+```{r}
+library(stringr)
+str_remove_all(data_input, "[,.!@?]")
+```
+
+3. Extract the date from the string and turn it into a proper date vector:
+
+```{r}
+string <- "Military defeats following the outbreak of the French Revolutionary Wars resulted in the insurrection of 10 August 1792. The monarchy was abolished and replaced by the French First Republic one month later."
+```
+
+```{r}
+dates <- str_extract_all(string, "\\d{1,2} [A-z]+ \\d{3,4}")
+lubridate::dmy(dates)
+```
+
+
+4. Check which of the lines in `data_input` have the word "million" (hint: you need to split the string into a vector with `str_split_1()` first)
+
+```{r}
+lines <- str_split_1(data_input, "\n") 
+str_detect(lines, "million")
+str_which(lines, "million")
+```
+
+
+5. Now save a subset of the lines into a new object
+
+There are many ways you could solve this. I would suggest to build on the last question and take the subset of lines that have the word "million' in them:
+
+```{r}
+lines_million <- str_subset(lines, "million")
+```
+
+Alternatively, you could make a data.frame first, as I have done in class and then use filter together with `str_detect.`
+
+6. From the following vector, I want you to write code that identifies the URLs from the German Wikipedia that do *not* use the secure Hypertext Transfer Protocol (HTTPS):
+
+```{r}
+vec <- c(
+  "https://en.wikipedia.org/wiki/France",
+  "https://en.wikipedia.org/wiki/Germany",
+  "https://de.wikipedia.org/wiki/Deutschland",
+  "http://de.wikipedia.org/wiki/Frankreich",
+  "https://de.wikipedia.org/wiki/Belgien",
+  "https://de.wikipedia.org/wiki/Bulgarien",
+  "http://de.wikipedia.org/wiki/K%C3%B6nigreich_D%C3%A4nemark",
+  "https://de.wikipedia.org/wiki/Slowenien",
+  "https://de.wikipedia.org/wiki/Rum%C3%A4nien"
+)
+```
+
+German Wikipedia artilces start with "de.wikipedia" instead of "en.wikipedia". The URLs that do not se HTTPS use "http" in the beginning. So all URLs that start with "http://de" fir the condition:
+
+```{r}
+str_detect(vec, "^http://de")
+```
+
+
+## Exercises 4
+
+1. From the `airports` table in the `nycflights13` package, access all airports that are in the Los Angeles time zone:
+
+```{r}
+nycflights13::airports
+```
+
+- I would approach this by first using `View()` on the table. Some people struggles with that, as the table was not in the environment and you can't click on it in the Environment tab of RStudio. So let's fix that first:
+
+```{r}
+airports <- nycflights13::airports
+```
+
+- Using the search function in the table viewer, we can look for "Los Angeles". We can then see that there is a column called `tzone` that has the value "America/Los_Angeles". This is the Los Angeles time zone. So we can use filter to access these
+
+```{r}
+airports |> 
+  filter(tzone == "America/Los_Angeles")
+```
+
+- If you took question literally, you might want to have just the airport names:
+
+```{r}
+airports |> 
+  filter(tzone == "America/Los_Angeles") |> 
+  pull(name)
+```
+
+2. Access the `faa` of the airport at latitude 40.87522 and longitude -74.28136
+
+- I had assume this would work:
+
+```{r}
+airports |> 
+  filter(lat == 40.87522, lon == -74.28136) |> 
+  pull(faa)
+```
+
+- Unfortunately, I hadn't checked the results. It is a little tricky to make exact comparisons between numeric values. So the only direct solution would have been something like this:
+
+```{r}
+airports |> 
+  filter(lat > 40.87521, lat < 40.87523,
+         lon > -74.28137, lon < -74.28135) |> 
+  pull(faa)
+```
+
+
+- A good workaround that some of you cam up with is to use `View(airports)` again and then use the search function to look for the numbers. Then you know which aiport is meant:
+
+```{r}
+airports |> 
+  filter(name == "Caldwell Essex County Airport") |> 
+  pull(faa)
+```
+
+
+3. The Las Vegas International Aiport (LAS) has been renamed since the dataset was created. Update the name to "Harry Reid International"
+
+- You can basically just copy the code from the slides:
+
+```{r}
+France <- tibble(country = "France", 
+                 inhabitants = 67000000L, 
+                 capital = "Paris", 
+                 founded = as.Date("843-08-10"))
+country_df |> 
+  rows_update(France, by = "country") |> 
+  filter(founded < "1300-01-01") 
+```
+
+And change it to fit the new task
+
+```{r}
+las <- tibble(faa = "LAS",
+              name = "Harry Reid International", 
+              lat = 36.080056, 
+              lon = -115.15225, 
+              alt = 2141, 
+              tz = -8, 
+              dst = "A", 
+              tzone = "America/Los_Angeles")
+airports |> 
+  rows_update(las, by = "faa")
+```
+
+
+
+4. Delete all aiports that have `NA` as their timezone
+
+To delete rows, I would always suggest that you create a new objects, which does not contain the rows you do not want:
+
+```{r}
+airports_clean <- airports |> 
+  filter(!is.na(tzone))
+```
+
+Side note: it would be logical to do something likes this:
+
+```{r}
+airports |> 
+  filter(!tzone == NA)
+```
+
+But that will not work in `R` because all comparisons to `NA` result in `NA`. You can test this with:
+
+```{r}
+1 == NA
+```
+
+
+## Exercises 5
+
+1. Look at the table `billboard` that is included in `tidyr`. What is not tidy about it?
+
+```{r}
+library(tidyr)
+billboard
+```
+
+- this is  wide or messy or bad table (whichever name you prefer) because the observations (song rankings by week 1, 2, 3, and so on) are stored in columns rather than rows
+- if you want to learn more about this table, you can use `?billboard` or look at it using `View(billboard)`
+
+2. Tidy the data
+
+- since the format is wide and we want a long (or tidy) table, we need `pivot_longer`
+
+```{r}
+billboard |> 
+  pivot_longer(
+    cols = starts_with("wk"), # which columns should be made longer
+    names_to = "week",        # in which column should the former column names be stored
+    values_to = "rank"        # in which column should the values be stored
+  )
+```
+
+
+3. The new table contains many missing values (`NA`s) explain why and if you should delete them
+
+- Looking at the song "Dancing Queen", we see that it was on the very last place of the top 100 for 5 weeks. Afterwards it apparently dropped out of the top 100. Since other songs remained there much longer, whoever created the table needed many extra columns that are empty for this song. Since we pivoted all values into the long format, the missing values remained
+- I think the NAs should be removed as they add no values. If we wanted to count how long a song was in the top 100, we could still do so. The information that it was not in the top 100 in week 40 or 47 is redundant
+
+
+4. Independently from whether it is the right thing to do or now: delete the `NA`s
+
+```{r}
+billboard |> 
+  pivot_longer(
+    cols = starts_with("wk"), # which columns should be made longer
+    names_to = "week",        # in which column should the former column names be stored
+    values_to = "rank"        # in which column should the values be stored
+  ) |> 
+  filter(!is.na(rank))        # we remove rows where the function is.na() returns TRUE for the rank column
+```
+
+5. Why does this code fail?
+
+```{r}
+#| error: true
+table4a |>  
+  pivot_longer(c(1999, 2000), names_to = "year", values_to = "cases")
+```
+
+This might become a little clearer when adding the missing argument name. `c(1999, 2000)` indicates which columns should be turned longer. But column names can't be numeric or integer in `R`. If they consist of numbers, they must be turned into character:
+
+```{r}
+table4a |>  
+  pivot_longer(cols = c("1999", "2000"), names_to = "year", values_to = "cases")
+```
+
+However, the cols argument can deal with numbers. Then they indicate which column, starting to count from the first column on the left, should be treated. What the code above did was to say turn columns 1999 and 2000 places from the left into the long format. Since the table only has 3 columns, the code failed.
+
+5. Make this into a tidy table
+
+```{r}
+preg <- tribble(
+  ~pregnant, ~male, ~female,
+  "yes",     NA,    10,
+  "no",      20,    12
+)
+```
+
+Maybe te hardest thing here is to think what would be cases here and what are variables, since there is no ID. We need to consider what the table shows. We have counts of females and males who are pregnant. So pregnant, gender and how often they appear together are variables, I would say:
+
+```{r}
+preg |>  
+  pivot_longer(cols = male:female, names_to = "gender", values_to = "n")
+```
+
+
+
