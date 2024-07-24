@@ -23,6 +23,9 @@ test.qmd
 03_Working_with_Files/data/house_of_commons
 04_Linking_and_joining_data_SQL/data/db.sql
 04_Linking_and_joining_data_SQL/data/inequality
+04_Linking_and_joining_data_SQL/media/venn_only.pdf
+04_Linking_and_joining_data_SQL/data/db_nyc.sql
+04_Linking_and_joining_data_SQL/notes.md
 
 03_solutions.qmd
 04_solutions.qmd
@@ -32,4 +35,3 @@ test.qmd
 08_solutions.qmd
 09_solutions.qmd
 
-04_Linking_and_joining_data_SQL/media/venn_only.pdf

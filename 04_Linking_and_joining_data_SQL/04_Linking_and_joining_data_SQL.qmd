@@ -1,19 +1,1334 @@
 ---
-title: "Introduction to Web Scraping and Data Management for Social Scientists"
-subtitle: "Session 4:	Linking and joining data & SQL"
+title: "Session 4:	Linking and joining data & SQL"
+subtitle: "ESS: Introduction to Web Scraping and Data Management for Social Scientists"
 author: "Johannes B. Gruber"
 date: 2024-07-25
 format:
   revealjs:
     smaller: true
+    width: 1600
+    height: 900
     scrollable: true
     code-line-numbers: true
     slide-number: c/t
-    logo: https://essexsummerschool.com/wp-content/uploads/2016/03/essex_logo-mobile.svg
-    self-contained: true
+    logo: ../ess_logo.png
+    embed-resources: true
+bibliography: ../references.bib
 execute:
-  cache: true
+  cache: false
   echo: true
-highlight-style: pygments
+  eval: true
+engine: knitr
+highlight-style: nord
 ---
 
+# Introduction
+## This Course
+
+<center>
+```{r setup}
+#| echo: false
+#| message: false
+library(tinytable)
+library(tidyverse)
+tibble::tribble(
+  ~Day, ~Session,
+  1,  "Introduction",
+  2,  "Data Structures and Wrangling",
+  3,  "Working with Files",
+  4,  "Linking and joining data & SQL",
+  5,  "Scaling, Reporting and Database Software",
+  6,  "Introduction to the Web",
+  7,  "Static Web Pages",
+  8,  "Application Programming Interface (APIs) ",
+  9,  "Interactive Web Pages",
+  10, "Building a Reproducible Research Project",
+) |> 
+  tt() |> 
+  style_tt() |> 
+  style_tt(i = 3, background = "#FDE000")
+```
+</center>
+
+## The Plan for Today
+
+:::: {.columns}
+
+::: {.column width="60%"}
+In this session, you learn:
+
+- why and how to work with relational data
+- how to join data from different tables in `R`
+- how to join data from different tables in `SQL`
+:::
+
+::: {.column width="30%" }
+![](media/relational.jpeg)
+Via DALL-E
+:::
+::::
+
+
+
+# Relational data
+## Why do we need to join data?
+
+:::: {.columns}
+::: {.column width="50%"}
+- It’s rare that a data analysis involves only a single data frame
+- As we learned in session 2: good tables don't contain redundancies (information about different entities should be stored separately)
+- Most databases use a relational database management system (or RDBMS)
+- Practically, we always think of relations as a connection of two tables
+- Relations of three or more tables are always a property of the relations between each pair
+:::
+::: {.column width="50%" }
+![](media/one.png){.fragment .fade-out .absolute top=100}
+![](media/two.png){.fragment .fade-in .absolute top=100}
+:::
+::::
+
+## Basic concept: keys
+
+- **primary key**: a variable or set of variables (which is then called a **compound key**) that uniquely identifies each observation
+- **foreign key**: a variable (or set of variables) that corresponds to a primary key in another table
+
+:::: {.columns}
+::: {.column width="50%" }
+```{r}
+df1 <- tibble(
+  id = 1:6,
+  capital_letters = LETTERS[1:6]
+)
+df1
+```
+
+:::
+::: {.column width="50%" }
+```{r}
+df2 <- tibble(
+  id = c(1:5, 7),
+  lowercase_letters = letters[c(1:5, 7)]
+)
+df2
+```
+:::
+::::
+
+
+# Joining tables in `r`
+
+::: {.ref}
+Source: @WickhamR4DS
+:::
+
+## Two different joins
+
+- **Mutating joins**: add new variables to one data frame from matching observations in another.
+- **Filtering joins**: filter observations from one data frame based on whether or not they match an observation in another.
+
+## <span style='color:#F99D1E;'>left_join</span>
+
+:::: {.columns}
+::: {.column width="50%"}
+::: {.incremental style='color:#F99D1E;'}
+- Mutating join
+- keeps all variables from x and y
+- keeps all rows from x
+- drops rows from y where key has no match in x
+:::
+:::
+::: {.column width="40%" }
+![](media/left_join.png)
+
+![](https://raw.githubusercontent.com/hadley/r4ds/main/diagrams/join/left.png)
+:::
+::::
+
+
+## <span style='color:#5B9BD5;'>right_join</span>
+
+:::: {.columns}
+::: {.column width="50%"}
+::: {.incremental style='color:#5B9BD5;'}
+- Mutating join
+- keeps all variables from x and y
+- keeps all rows from y
+- drops rows from x where key has no match in y
+- if you would reverse x and y, it's the same as `left_join`
+:::
+:::
+::: {.column width="40%" }
+![](media/right_join.png)
+
+![](https://raw.githubusercontent.com/hadley/r4ds/main/diagrams/join/right.png)
+:::
+::::
+
+## <span style='color:#EC2B88;'>full_join</span>
+
+:::: {.columns}
+::: {.column width="50%"}
+::: {.incremental style='color:#EC2B88;'}
+- Mutating join
+- keeps all variables from x and y
+- keeps all rows from x and y
+:::
+:::
+::: {.column width="40%" }
+![](media/full_join.png)
+
+![](https://raw.githubusercontent.com/hadley/r4ds/main/diagrams/join/full.png)
+:::
+::::
+
+## <span style='color:#F7DC05;'>inner_join</span>
+
+:::: {.columns}
+::: {.column width="50%"}
+::: {.incremental style='color:#F7DC05;'}
+- Mutating join
+- keeps all variables from x and y
+- drops rows from x where key has no match in y
+- drops rows from y where key has no match in x
+- essentially only keeps complete cases
+:::
+:::
+::: {.column width="40%" }
+![](media/inner_join.png)
+
+![](https://raw.githubusercontent.com/hadley/r4ds/main/diagrams/join/inner.png)
+
+:::
+::::
+
+## <span style='color:#695092;'>semi_join</span>
+
+:::: {.columns}
+::: {.column width="50%"}
+::: {.incremental style='color:#695092;'}
+- Filtering join
+- only keeps variables from x
+- drops rows from x where key has **no** match in y
+:::
+:::
+::: {.column width="40%" }
+![](media/semi_join.png)
+
+![](https://raw.githubusercontent.com/hadley/r4ds/main/diagrams/join/semi.png)
+:::
+::::
+
+## <span style='color:#01B0AB;'>anti_join</span>
+
+:::: {.columns}
+::: {.column width="50%"}
+::: {.incremental style='color:#01B0AB;'}
+- Filtering join
+- only keeps variables from x
+- drops rows from x where key has **a** match in y
+:::
+:::
+::: {.column width="40%" }
+![](media/anti_join.png)
+
+![](https://raw.githubusercontent.com/hadley/r4ds/main/diagrams/join/anti.png)
+:::
+::::
+
+## Syntax: left and right
+
+:::: {.columns}
+::: {.column width="50%"}
+```{r}
+left_join(df1, df2, by = "id")
+```
+:::
+::: {.column width="50%" }
+```{r}
+right_join(df1, df2, by = "id")
+```
+:::
+::::
+
+## Syntax: full and inner join
+
+:::: {.columns}
+::: {.column width="50%"}
+```{r}
+full_join(df1, df2, by = "id")
+```
+:::
+::: {.column width="50%" }
+```{r}
+inner_join(df1, df2, by = "id")
+```
+:::
+::::
+
+## Syntax: semi and anti join
+
+:::: {.columns}
+::: {.column width="50%"}
+```{r}
+semi_join(df1, df2, by = "id")
+```
+
+Same as:
+
+```{r}
+df1 |> 
+  filter(id %in% df2$id)
+```
+:::
+::: {.column width="50%" }
+```{r}
+anti_join(df1, df2, by = "id")
+```
+
+```{r}
+df1 |> 
+  filter(!id %in% df2$id)
+```
+:::
+::::
+
+## Finding keys
+
+:::: {.columns}
+::: {.column width="50%"}
+```{r}
+pets <- tribble(
+  ~animal, ~name,            ~breed,
+  #-----       
+  "cat",   "Leo",            "European Shorthair",
+  "dog",   "Bruno",          "Labrador",
+  "cat",   "Charlie",        "Ragdolls",
+  "mouse", "Julius Cheeser", "Agouti",
+  "cat",   "Felix",          "Persian",
+  "horse", "Tina",           "Mustang",
+  "rabbit","snowball",       "Persian",
+)
+```
+
+:::
+::: {.column width="50%"}
+```{r}
+breeds <- tribble(
+  ~species,   ~breed,                ~life_expectancy,
+  #-----
+  "cat",     "European Shorthair",  14,
+  "dog",     "Labrador",            11,
+  "cat",     "Ragdolls",            15,
+  "cat",     "Persian",             15,
+  "mouse",   "Agouti",              1,
+  "snake",   "Python",              25,
+  "rabbit",  "Persian",             12,
+)
+```
+:::
+::::
+
+:::{.fragment}
+Two criteria:
+
+- primary key should uniquely identify cases
+- primary key should have a corresponding foreign key (at least for some cases)
+:::
+
+## Finding keys {visibility="uncounted"}
+
+```{r}
+left_join(pets, breeds, by = c("animal" = "species"), suffix = c("_x", "_y"))
+```
+
+:::{.fragment}
+```{r}
+left_join(pets, breeds, by = c("animal" = "species", "breed"))
+right_join(pets, breeds, by = c("animal" = "species", "breed"))
+```
+:::
+
+## Finding keys {visibility="uncounted"}
+
+```{r}
+full_join(pets, breeds, by = c("animal" = "species", "breed"))
+```
+
+```{r}
+inner_join(pets, breeds, by = c("animal" = "species", "breed"))
+```
+
+## Finding keys {visibility="uncounted"}
+
+
+
+:::: {.columns}
+::: {.column width="50%"}
+```{r}
+semi_join(pets, breeds, by = c("animal" = "species", "breed"))
+```
+
+```{r}
+anti_join(pets, breeds, by = c("animal" = "species", "breed"))
+```
+:::
+::: {.column width="50%"}
+```{r}
+pets |> 
+  filter(animal %in% breeds$species,
+         breed  %in% breeds$breed)
+```
+
+```{r}
+pets |> 
+  filter(!animal %in% breeds$species,
+         !breed  %in% breeds$breed)
+```
+:::
+::::
+
+
+## Many to many
+
+:::: {.columns}
+::: {.column width="50%"}
+::: {.incremental}
+- When you get a many-to-many instead of a many-to-one join, it can indicate a problem
+- Either you have chosen the wrong key by accident or your data model is wrong
+- But the question is a conceptual one:
+  + For example, several pets usually have the same species and breed, but one pet should have one breed (or maybe a mix)
+  + But a single pet can have multiple owner, and each owner can have multiple pets
+:::
+:::
+::: {.column width="40%"}
+
+### many-to-one
+
+![](https://raw.githubusercontent.com/hadley/r4ds/main/diagrams/join/many-to-one.png)
+
+### many-to-many
+
+![](https://raw.githubusercontent.com/hadley/r4ds/main/diagrams/join/many-to-many.png)
+:::
+::::
+
+## Case study: 2016 US primaries
+
+```{r}
+#| message: false
+library(rio)
+csv_folder_url <- "https://raw.githubusercontent.com/houstondatavis/data-jam-august-2016/master/csv"
+results <- import(paste(csv_folder_url, "primary_results.csv", sep = "/"))
+schedule <- import(paste(csv_folder_url, "primary_schedule.csv", sep = "/"))
+facts <- import(paste(csv_folder_url, "county_facts.csv", sep = "/")) |>
+  select(area_name,
+    population = Pop_2014_count,
+    pop_change = Pop_change_pct,
+    over65 = Age_over_65_pct,
+    female = Sex_female_pct,
+    white = Race_white_pct,
+    college = Pop_college_grad_pct,
+    income = Income_per_capita
+  )
+```
+
+:::: {.columns}
+::: {.column width="33%" }
+```{r}
+glimpse(results, width = 50)
+```
+:::
+::: {.column width="33%" }
+```{r}
+glimpse(schedule, width = 50)
+```
+:::
+::: {.column width="33%" }
+```{r}
+glimpse(facts, width = 50)
+```
+:::
+::::
+
+:::{.fragment}
+- RQ 1: How was each candidate doing at specific points in time?
+- RQ 2: Was there a connection between age and candidate preference in the Democratic Party?
+:::
+
+## 2016 US primaries: data wrangling
+
+:::: {.columns}
+::: {.column width="50%" }
+Convert the date in the schedule to date class:
+
+```{r}
+schedule <- schedule %>% 
+  mutate(date = lubridate::mdy(date))
+schedule
+```
+:::
+::: {.column width="50%" }
+Aggregate results on the state level instead of the county level:
+
+```{r}
+results_state <- results %>% 
+  group_by(state, party, candidate) %>% 
+  summarize(votes = sum(votes))
+results_state
+```
+:::
+::::
+
+## 2016 US primaries: candidates performance over time
+
+```{r}
+results_state_time <- results_state |> 
+  inner_join(schedule, by = c("state", "party"))
+results_state_time
+```
+
+
+```{r}
+#| output-location: column
+results_state_time |> 
+  arrange(date) |> 
+  group_by(candidate) |> 
+  mutate(votes_agg = cumsum(votes)) |> 
+  ungroup() |> 
+  ggplot(mapping = aes(x = date, y = votes_agg, colour = candidate)) +
+  geom_line()
+```
+
+```{r}
+#| classes: fragment
+#| output-location: column
+results_state_time |> 
+  arrange(date) |> 
+  group_by(candidate) |> 
+  mutate(votes_agg = cumsum(votes)) |> 
+  ungroup() |> 
+  ggplot(mapping = aes(x = date, y = votes_agg, colour = candidate)) +
+  geom_line() +
+  facet_wrap("party")
+```
+
+## 2016 US primaries: candidates performance vs average age
+
+```{r}
+#| classes: fragment
+#| output-location: column
+results_state_facts <- results_state |> 
+  inner_join(facts, by = c("state" = "area_name")) |> 
+  group_by(state, party) |> 
+  mutate(total_votes = sum(votes), 
+         pct_votes = votes / total_votes) |> 
+  ungroup()
+results_state_facts
+```
+
+```{r}
+#| classes: fragment
+#| output-location: column
+results_state_facts |>
+  filter(party == "Democrat",
+    candidate %in% c("Bernie Sanders",
+                     "Hillary Clinton")
+  ) |>
+  ggplot(aes(x = over65, y = pct_votes, colour = candidate)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ x)
+```
+
+## Exercises 1
+
+1. See if some of the other variables influence support for Sanders or Clinton
+2. Below I prepared code that loads data from the `nycflights13` package which is about flights departing NYC in 2013:
+
+```{r}
+library(nycflights13)
+data(airports)
+data(flights)
+data(weather)
+data(planes)
+data(airlines)
+```
+
+The dataset is perfect for practising joining data, as the set is split into tables that relate to each other.
+You can see the relation in the diagram below:
+
+![](https://raw.githubusercontent.com/hadley/r4ds/main/diagrams/relational.png)
+
+Imagine you wanted to draw (approximately) the route each plane flies from its origin to its destination. What variables would you need? What data frames would you need to combine?
+
+3. How could you calculate the average age of the planes departing from NYC?
+4. What was the highest temperature difference a flight experienced from origin to destination
+5. Which airline operated the flight you found in 3.?
+
+
+# Intro to *Structured query language* (`SQL`)
+## Why learn `SQL`?
+
+:::: {.columns}
+::: {.column width="50%"}
+::: {.incremental}
+- managing tables in files instead of a database is error-prone:
+  + you need to keep files consistent
+  + you need to maintain relational integrity
+- using files instead of a database is slow:
+  + you have to read in files before doing operations on the data (although systems like `arrow` improve the situation)
+  + you need to use your local hardware instead of a remote server (although you could SSH into a server)
+  + collaboration is limited and again error-prone
+- database management system (DBMS), which solve these issues often speak `Structured Query Language` (`SQL`)
+:::
+:::
+::: {.column width="50%" }
+```{r}
+#| echo: false
+#| eval: true
+#| out-width: "90%"
+#| fig-cap: |
+#|   Interacting with a database management system from @weidmann_data_2023, p. 105.
+
+knitr::include_graphics("media/dbms.png")
+```
+:::
+::::
+
+
+## `SQL` basic syntax
+
+- `R` has a generic interface to communicate with relational databases: *R Database Interface* or `DBI`
+
+```{r}
+library(DBI)
+```
+
+To communicate with a specific database format, `DBI` needs a driver
+
+```{r}
+library(RSQLite)
+```
+
+- **RSQLite**: translates `R` commands to *SQLite*
+- **SQLite**: a free and open source, well-known embedded database engine 
+
+## Creating and connecting to an SQLite database
+
+```{r}
+dir.create("data", showWarnings = FALSE)
+unlink("data/db.sql") # just to make sure we use a new db
+db <- dbConnect(SQLite(), "data/db.sql")
+db
+class(db)
+```
+
+- **dbConnect()**: sets up a connection
+- **SQLite()**: provides the driver for the specific DBMS
+
+Let's see what's in the database so far:
+
+```{r}
+dbGetQuery(db, "SELECT name FROM sqlite_master")
+```
+
+Nothing. SQLite databases are typically stored in a single file:
+
+```{r}
+file.size("data/db.sql")
+```
+
+Our file has the size 0, which means it consists just of a place-holder.
+
+## Adding a table to the SQLite database
+
+So far, the database is empty:
+
+```{r}
+# this is a shorthand for "SELECT name FROM sqlite_master" above
+dbListTables(db) 
+```
+
+Before we can add data, we have to create a table in the database:
+
+```{r}
+dbExecute(db,
+          "CREATE TABLE df1 (
+            election_id integer,
+            capital_letters varchar)")
+dbListTables(db)
+```
+
+Besides integer and varchar (suitable for short strings), you can also use `real` (numeric), dates and blob (stored as binary data).
+
+Now we can add cases:
+
+```{r}
+dbExecute(db,
+          "INSERT INTO df1
+            VALUES (1, 'A')")
+```
+
+And we can pull the data back out:
+
+```{r}
+dbGetQuery(db, "SELECT * FROM df1")
+```
+
+We can start from scratch by deleting this table:
+
+```{r}
+dbExecute(db, "DROP TABLE df1")
+```
+
+## Adding a table with constraints
+
+We dropped the last table, so the database is empty again
+
+```{r}
+dbListTables(db)
+```
+
+Let's define the table again, but add constraints to enforce certain data:
+
+```{r}
+dbExecute(db,
+          "CREATE TABLE df1 (
+              id INTEGER PRIMARY KEY,
+              capital_letters VARCHAR(1) CHECK (capital_letters GLOB '[A-Z]'), 
+              my_date DATE CHECK (my_date > '2000-01-01')
+          )")
+dbListTables(db)
+```
+
+- `id` is now a primary key, which makes sure that it is unique
+- the field `capital_letters` is now constrained to capital letters
+- only dates in 2000 or later are allowed
+
+## Adding a table with constraints {visibility="uncounted"}
+
+Let's try to add a case:
+
+```{r}
+#| error: true
+dbExecute(db,
+          "INSERT INTO df1
+            VALUES (1, 'a', '1999-12-31')")
+```
+
+Let's try again with a capital letter:
+
+```{r}
+#| error: true
+dbExecute(db,
+          "INSERT INTO df1
+            VALUES (1, 'A', '1999-12-31')")
+```
+
+OK, let's adhere to the constraints:
+
+```{r}
+dbExecute(db,
+          "INSERT INTO df1
+            VALUES (1, 'A', '2000-12-31')")
+```
+
+And let's test the last constraint:
+
+```{r}
+#| error: true
+dbExecute(db,
+          "INSERT INTO df1
+            VALUES (1, 'A', '2000-12-31')")
+```
+
+## Adding Data
+
+We already know how to add a complete case:
+
+```{r}
+dbExecute(db,
+          "INSERT INTO df1
+            VALUES (2, 'B', '2000-12-31')")
+```
+
+But you can also add a case with a missing value:
+
+```{r}
+dbExecute(db,
+          "INSERT INTO df1 (id, capital_letters)
+            VALUES (3, 'C')")
+```
+
+OR:
+
+```{r}
+dbExecute(db,
+          "INSERT INTO df1 
+            VALUES (4, 'D', NULL)")
+```
+
+```{r}
+dbGetQuery(db, "SELECT * FROM df1")
+```
+
+## Updating Data
+
+If we made a mistake or something changes, we can update a specific row:
+
+```{r}
+dbExecute(db, "UPDATE df1
+               SET my_date = '2023-07-22'
+               WHERE id = 3")
+```
+
+Or we can add a new variable and calculate it from existing values:
+
+```{r}
+dbExecute(db, "ALTER TABLE df1 ADD year integer")
+dbExecute(db, "UPDATE df1
+               SET year = strftime('%Y', my_date)")
+```
+
+```{r}
+dbGetQuery(db, "SELECT * FROM df1")
+```
+
+## Accessing Data
+
+We have already seen the `SELECT` command, let's explore what else we can do!
+
+Access only certain fields:
+
+```{r}
+dbGetQuery(db, "SELECT id, year FROM df1")
+```
+
+Access only certain rows:
+
+```{r}
+dbGetQuery(db, "SELECT id, year 
+                FROM df1
+                WHERE year > 2000")
+```
+
+Computing new values on the fly:
+
+```{r}
+dbGetQuery(db, "SELECT id, my_date, strftime('%d, %m', my_date) FROM df1")
+```
+
+
+##  Deleting Data
+
+Two ways to get rid of data:
+
+- `DELETE`: used to remove rows from a table
+- `DROP`: used to remove entire database objects like tables, databases, indexes, or views
+
+```{r}
+dbExecute(db, "DELETE FROM df1 
+               WHERE id = 1")
+dbGetQuery(db, "SELECT * FROM df1")
+```
+
+
+```{r}
+#| error: true
+dbExecute(db, "DROP TABLE df1")
+dbGetQuery(db, "SELECT * FROM df1")
+```
+
+
+## `SQL` basic syntax: summary
+
+:::: {.columns}
+::: {.column width="50%"}
+- insensitive to line breaks
+- case-insensitive
+- convention to spell SQL keywords in upper case, and names of tables, columns, and functions in lower case
+- important verbs are:
+  + `CREATE`: define a new table
+  + `INSERT`: add new rows to a table
+  + `UPDATE`: modify existing rows in a table
+  + `ALTER`: modify existing fields in a table
+  + `SELECT`: query data from one or more tables
+  + `DELETE`: remove rows from a table
+  + `DROP`: remove a database object (e.g., table)
+
+:::
+::: {.column width="50%" }
+```{r sql-filter}
+#| eval: false
+dbGetQuery(db, "SELECT * 
+                FROM df1
+                WHERE id < 4")
+```
+
+```{r}
+#| eval: false
+dbGetQuery(db, "sELeCt id FROM Df1")
+```
+
+![](media/case-insensitive.png){.fragment}
+:::
+::::
+
+## `SQL` basic syntax (from `R`)
+
+There are a couple of useful functions in the `DBI` package/the driver packages.
+We've seen the `dbListTables` already:
+
+```{r}
+dbListTables(db)
+```
+
+You can also create a table from a data.frame:
+
+```{r}
+dbWriteTable(conn = db, name = "df1", value = df1)
+dbWriteTable(conn = db, name = "df2", value = df2)
+```
+
+And get information about the defined fields (fields is the equivalent of columns):
+
+```{r}
+dbListFields(conn = db, name = "df1")
+dbListFields(conn = db, name = "df2")
+```
+
+## `SQL` basic syntax (from `R`) {visibility="uncounted"}
+
+We can read the entire table back into `R`:
+
+```{r}
+dbReadTable(conn = db, "df1")
+```
+
+Delete (drop) a table:
+
+```{r}
+dbRemoveTable(conn = db, "df1")
+```
+
+Check if a table exists
+
+```{r}
+if (!dbExistsTable(conn = db, "df1")) {
+  message("df1 does not exist. Creating it")
+  dbWriteTable(conn = db, name = "df1", value = df1)
+}
+```
+
+## Exercises 2
+
+1. create a new table in `db` called `elections` with the fields: `election_id`, `country_name`, `election_date`, `party_id`, `vote_share`, `seats`, and  `seats_total`. Choose appropriate data types for the fields (maybe peak ahead to the next exercise).
+2. Using SQL syntax, add this data to the `elections` table:
+
+| election_id | country_name | election_date | party_id | vote_share | seats | seats_total |
+|-------------|--------------|---------------|----------|------------|-------|-------------|
+| 1030        | Austria      | 1919-02-16    | 97       | 40.75      | 72    | 170         |
+
+3. Using SQL syntax, add this data to the `elections` table:
+
+| election_id | country_name | election_date | vote_share | party_id |
+|-------------|--------------|---------------|------------|----------|
+| 872         | Belgium      | 1908-05-24    | 22.6       | 2422     |
+
+4. Querying data from `elections`, create an `R` object that has the `election_id`, `party_id` and `vote_share` fields for elections after 1910.
+5. Querying data from `elections`, get `election_id`, `party_id`,  `vote_share` fields and just the year of the election.
+6. Add a new field `vote_share_prop` to the `elections` database which shows the vote share as proportion rather than a percentage.
+
+# Joining tables in `SQL`
+## Some good news
+
+:::: {.columns}
+::: {.column width="50%" }
+We basically already know how joining in SQL works!
+:::
+::: {.column width="50%" }
+![](media/learn_sql.png)
+:::
+::::
+
+
+## `SQL` vs `R`: <span style='color:#F99D1E;'>left_join</span>
+
+:::: {.columns}
+::: {.column width="33%" }
+![](media/left_join.png)
+:::
+::: {.column width="33%" }
+### `R`
+
+```{r}
+left_join(x = df1, y = df2, by = c("id" = "id"))
+```
+:::
+::: {.column width="33%" }
+### `SQL`
+
+```{r}
+dbGetQuery(db, "SELECT * FROM df1 
+                LEFT JOIN df2 
+                ON df1.id = df2.id")
+```
+:::
+::::
+
+
+## <span style='color:#5B9BD5;'>right_join</span>
+
+:::: {.columns}
+::: {.column width="33%" }
+![](media/right_join.png)
+:::
+::: {.column width="33%" }
+### `R`
+
+```{r}
+right_join(x = df1, y = df2, by = c("id" = "id"))
+```
+:::
+::: {.column width="33%" }
+### `SQL`
+
+```{r}
+dbGetQuery(db, "SELECT * FROM df1
+                RIGHT JOIN df2 
+                ON df1.id = df2.id")
+```
+:::
+::::
+
+## <span style='color:#EC2B88;'>full_join</span>
+
+:::: {.columns}
+::: {.column width="33%" }
+![](media/full_join.png)
+:::
+::: {.column width="33%" }
+### `R`
+
+```{r}
+full_join(x = df1, y = df2, by = c("id" = "id"))
+```
+:::
+::: {.column width="33%" }
+### `SQL`
+
+```{r}
+dbGetQuery(db, "SELECT * FROM df1
+                FULL JOIN df2
+                ON df1.id = df2.id")
+```
+:::
+::::
+
+## <span style='color:#F7DC05;'>inner_join</span>
+
+:::: {.columns}
+::: {.column width="33%" }
+![](media/inner_join.png)
+:::
+::: {.column width="33%" }
+### `R`
+
+```{r}
+inner_join(x = df1, y = df2, by = c("id" = "id"))
+```
+:::
+::: {.column width="33%" }
+### `SQL`
+
+```{r}
+dbGetQuery(db, "SELECT * FROM df1 
+                INNER JOIN df2 
+                ON df1.id = df2.id")
+```
+:::
+::::
+
+
+## <span style='color:#695092;'>semi_join</span>
+
+:::: {.columns}
+::: {.column width="33%" }
+![](media/semi_join.png)
+:::
+::: {.column width="33%" }
+### `R`
+
+```{r}
+semi_join(x = df1, y = df2, by = c("id" = "id"))
+```
+
+```{r}
+df1 |> 
+  filter(id %in% df2$id)
+```
+:::
+::: {.column width="33%" }
+### `SQL`
+
+```{r}
+dbGetQuery(db, "SELECT * FROM df1 
+                WHERE EXISTS (
+                  SELECT 1 FROM df2 
+                  WHERE df1.id = df2.id
+                )")
+```
+:::
+::::
+
+
+
+## <span style='color:#01B0AB;'>anti_join</span>
+
+:::: {.columns}
+::: {.column width="33%" }
+![](media/anti_join.png)
+:::
+::: {.column width="33%" }
+### `R`
+
+```{r}
+anti_join(x = df1, y = df2, by = c("id" = "id"))
+```
+
+```{r}
+df1 |> 
+  filter(!id %in% df2$id)
+```
+:::
+::: {.column width="33%" }
+### `SQL`
+
+```{r}
+dbGetQuery(db, "SELECT * FROM df1 
+                WHERE NOT EXISTS (
+                  SELECT 1 FROM df2
+                  WHERE df1.id = df2.id
+                )")
+```
+:::
+::::
+
+## Exercises 3
+
+1. Add the three `data.frames` from the 2016 primaries case study to the database (`schedule`, `results_state`, and `facts`)
+2. Right join `results_state` and `facts`
+3. Recreate the table `results_state_time` by querying and joining from db. Hint: multiple keys can be used by putting AND between them, e.g., `ON df1.id = df2.id AND df1.id2 = df2.id2`.
+
+# `dbplyr`
+## Working with connections in `R`
+
+If you think `SQL` is not necessarily your thing, there is good news: `dbplyr` makes it possible to connect to tables and use `dplyr` syntax.
+You don't have to attach `dbplyr` for that, you just need `dplyr` and have `dbplyr` installed.
+
+```{r}
+library(dbplyr) # you don't usually need to load this, just have it installed
+```
+
+Let's create a new table for that:
+
+```{r}
+dbWriteTable(db, "diamonds", diamonds)
+```
+
+To connect to a table in a database, we can use `tbl`:
+
+```{r}
+diamonds_con <- tbl(db, "diamonds")
+diamonds_con
+```
+
+## Working with connections in `R`  {visibility="uncounted"}
+
+However, this table is just a connections, and `R` has pulled only the first couple of rows to display them.
+
+```{r}
+object.size(diamonds)
+object.size(diamonds_con)
+```
+
+This is also why `View` doesn't really work well:
+
+```{r}
+#| eval: false
+View(diamonds_con)
+```
+
+## `collect`
+
+To get the object in `R` properly, you need to `collect` the data first:
+
+```{r}
+x_df <- collect(diamonds_con)
+```
+
+`x_df` is now a real data.frame
+
+```{r}
+object.size(x_df)
+```
+
+```{r}
+#| eval: false
+View(diamonds_con)
+```
+
+## Supports `dplyr` verbs
+
+Filter, select, mutate and summarise:
+
+```{r}
+diamonds_con |> 
+  filter(cut == "Premium", 
+         price < 400) |> 
+  select(price) |> 
+  mutate(price_gbp = price * 0.77) |> 
+  summarise(avg_price = mean(price),
+            avg_price_gbp = mean(price_gbp))
+```
+
+Joins also work:
+
+```{r}
+df1_con <- tbl(db, "df1")
+df2_con <- tbl(db, "df2")
+df1_con |> 
+  left_join(df2_con, by = "id") |> 
+  collect()
+```
+
+## Supports `dplyr` verbs  {visibility="uncounted"}
+
+If you decide to implement this query somewhere else, you can show it after executing it:
+
+```{r}
+df1_con |> 
+  left_join(df2_con, by = "id") |> 
+  show_query()
+```
+
+## Case study: New York City flight data
+
+Let's move the `nycflights13` into a new database:
+
+```{r}
+library(nycflights13)
+unlink("data/db_nyc.sql") # just to make sure we use a new db
+db_nyc <- dbConnect(SQLite(), "data/db_nyc.sql")
+dbWriteTable(db_nyc, "airports", airports)
+dbWriteTable(db_nyc, "flights", flights)
+dbWriteTable(db_nyc, "weather", weather)
+dbWriteTable(db_nyc, "planes", planes)
+dbWriteTable(db_nyc, "airlines", airlines)
+```
+
+RQ1: Is there a relationship between the age of a plane and its delays?
+RQ2: What weather conditions make it more likely to see a delay?
+
+![](https://raw.githubusercontent.com/hadley/r4ds/main/diagrams/relational.png)
+
+## NYC flights: age vs delays
+
+```{r}
+plane_delays_age <- tbl(db_nyc, "flights") |> 
+  inner_join(tbl(db_nyc, "planes"), by = "tailnum", suffix = c("", "_plane")) |> 
+  mutate(plane_age = year - year_plane) |> 
+  select(arr_delay, plane_age) |> 
+  filter(!is.na(arr_delay),
+         !is.na(plane_age)) |> 
+  collect()
+```
+
+```{r}
+#| output-location: column
+plane_delays_age |> 
+  group_by(plane_age) |> 
+  summarise(avg_delay = mean(arr_delay)) |> 
+  ggplot(aes(x = plane_age, y = avg_delay)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ x)
+```
+
+
+## NYC flights: weather conditions vs delays
+
+```{r}
+plane_delays_weather <- tbl(db_nyc, "flights") |> 
+  inner_join(tbl(db_nyc, "weather"), by = c("time_hour", "origin")) |> 
+  filter(!is.na(temp), !is.na(arr_delay), !is.na(wind_speed)) |> 
+  collect()
+```
+
+```{r}
+#| output-location: column
+plane_delays_weather |>
+  ggplot(aes(x = temp, y = arr_delay)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ x)
+```
+
+```{r}
+#| output-location: column
+plane_delays_weather |>
+  ggplot(aes(x = wind_speed, y = arr_delay)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ x)
+```
+
+
+## Should you learn SQL properly?
+
+It depends!
+
+- how often and how advanced do you want to use it?
+- do you want to stay in the `R` ecosystem or extend your knowledge beyond it?
+- how many clients will use your database?
+
+There is an interesting video discussing the question in more detail here: <https://youtu.be/gdzONbwfWk0>
+
+## Execises 4
+
+1. Right join `results_state` and `facts` using `dbplyr` instead of `dbGetQuery`
+2. Recreate the table `results_state_time` by querying and joining from db (using `dbplyr` instead of `dbGetQuery`).
+3. Recreate `results_state_facts` using `dbplyr`. Don't forget to add `total_votes` and `pct_votes`
+4. Extract the SQL query from your code in 1. and run it with `dbGetQuery`
+
+# Wrap Up
+
+Save some information about the session for reproducibility.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show Session Info"
+sessionInfo()
+dbDisconnect(db)
+```
+
+
+<!-- This is just some extra CSS code to make presentation look pretty -->
+```{css}
+#| echo: false
+.table-striped {
+  > tbody > tr:nth-of-type(odd) > * {
+    background-color: #fff9ce;
+  }
+}
+.table-hover {
+  > tbody > tr:hover > * {
+    background-color: #ffe99e; /* Adjust this color as needed */
+  }
+}
+.reveal section img { 
+    background: rgba(255, 255, 255, 0.12); 
+    border: 4px solid #eeeeee;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.15) 
+}
+```
+
+
+
+# References
