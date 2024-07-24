@@ -605,7 +605,7 @@ Mostly I have been using the actual GNU make, but it's syntax is quite different
 
 1. set up a directory for your research project and fill it with the mock data and analysis files you imagine you need
 2. write a readme file that contains documentation of your file structure 
-3. Present it to the class
+3. Present it to the class tomorrow (for volunteers)
 
 
 # Working with many files at the same time

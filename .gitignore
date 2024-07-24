@@ -21,13 +21,14 @@ test.qmd
 03_Working_with_Files/data/main.zip
 03_Working_with_Files/data/files/
 03_Working_with_Files/data/house_of_commons
+03_Working_with_Files/data/house_of_commons_parquet
+03_Working_with_Files/data/elites_data_UK.json
 04_Linking_and_joining_data_SQL/data/db.sql
 04_Linking_and_joining_data_SQL/data/inequality
 04_Linking_and_joining_data_SQL/media/venn_only.pdf
 04_Linking_and_joining_data_SQL/data/db_nyc.sql
 04_Linking_and_joining_data_SQL/notes.md
 
-03_solutions.qmd
 04_solutions.qmd
 05_solutions.qmd
 06_solutions.qmd

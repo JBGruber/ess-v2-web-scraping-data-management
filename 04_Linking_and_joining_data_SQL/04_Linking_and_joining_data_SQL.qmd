@@ -1297,6 +1297,12 @@ There is an interesting video discussing the question in more detail here: <http
 3. Recreate `results_state_facts` using `dbplyr`. Don't forget to add `total_votes` and `pct_votes`
 4. Extract the SQL query from your code in 1. and run it with `dbGetQuery`
 
+# Homework
+
+Tomorrow, we will use the software Docker to simulate a database server. Install the software and make sure it works. You can follow the guide I made here:
+
+<https://youtu.be/iMyCdd5nP5U>
+
 # Wrap Up
 
 Save some information about the session for reproducibility.
