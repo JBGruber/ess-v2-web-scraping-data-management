@@ -115,7 +115,7 @@ df2
 ::::
 
 
-# Joining tables in `r`
+# Joining tables in `R`
 
 ::: {.ref}
 Source: @WickhamR4DS
@@ -560,9 +560,9 @@ You can see the relation in the diagram below:
 
 Imagine you wanted to draw (approximately) the route each plane flies from its origin to its destination. What variables would you need? What data frames would you need to combine?
 
-3. How could you calculate the average age of the planes departing from NYC?
-4. What was the highest temperature difference a flight experienced from origin to destination
-5. Which airline operated the flight you found in 3.?
+3. Add the location of the origin *and* destination (i.e. the `lat` and `lon`) to `flights`.
+4. Which airlines departed most often from the NYC airports (i.e. JFK, LGA or EWR). Use their real names not the abbreviation
+5. How could you calculate the average age of the planes departing from NYC? (hint: you can calculate averages with `mean()`, you might want to use `na.rm = TRUE`)
 
 
 # Intro to *Structured query language* (`SQL`)
