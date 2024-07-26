@@ -553,7 +553,7 @@ data(planes)
 data(airlines)
 ```
 
-The dataset is perfect for practising joining data, as the set is split into tables that relate to each other.
+The dataset is perfect for practicing joining data, as the set is split into tables that relate to each other.
 You can see the relation in the diagram below:
 
 ![](https://raw.githubusercontent.com/hadley/r4ds/main/diagrams/relational.png)
@@ -1211,6 +1211,86 @@ df1_con |>
   show_query()
 ```
 
+## `collect()` vs. `compute()`
+
+- `collect()` gets data from the database; like `dbGetQuery()`
+- `compute()` changes data in the database; like `dbExecute()`
+
+We join the two tables again, and also compute a new column:
+
+```{r}
+df1_con |> 
+  left_join(df2_con, by = "id") |> 
+  mutate(all_letters = paste(capital_letters, 
+                             lowercase_letters)) |> 
+  collect()
+```
+
+Instead of just bringing this new table to `R`, we can directly save it to the database
+
+```{r}
+df1_con |> 
+  left_join(df2_con, by = "id") |> 
+  mutate(all_letters = paste(capital_letters, 
+                             lowercase_letters)) |> 
+  compute() # only this line is different!
+```
+
+## `collect()` vs. `compute()` {visibility="uncounted"}
+
+However, if we look at the table, it still looks the same
+
+```{r}
+df1_con |> 
+  collect()
+```
+
+So what gives?
+
+## `collect()` vs. `compute()` {visibility="uncounted"}
+
+When we list the tables, we see what happened:
+
+```{r}
+dbListTables(db)
+```
+
+`dbplyr` by default does not overwrite the original table, but instead saves the results to a new, temporary table (they are removed when you disconnect from the db).
+
+If we want to create a persistent version of the table, we can do:
+
+```{r}
+df1_con |> 
+  left_join(df2_con, by = "id") |> 
+  mutate(all_letters = paste(capital_letters, 
+                             lowercase_letters)) |> 
+  compute(temporary = FALSE, name = "df1_updated")
+```
+
+```{r}
+tbl(db, "df1_updated")
+```
+
+## `collect()` vs. `compute()` {visibility="uncounted"}
+
+And finally, if we want to update the table in place, we can bring it into `R` and then copy it back to overwrite the old one:
+
+```{r}
+temp <- df1_con |> 
+  left_join(df2_con, by = "id") |> 
+  mutate(all_letters = paste(capital_letters, 
+                             lowercase_letters)) |> 
+  collect()
+copy_to(db, temp, "df1", overwrite = TRUE)
+```
+
+Now, we replaced the original version:
+
+```{r}
+df1_con |> 
+  collect()
+```
+
 ## Case study: New York City flight data
 
 Let's move the `nycflights13` into a new database:
@@ -1303,6 +1383,16 @@ Tomorrow, we will use the software Docker to simulate a database server. Install
 
 <https://youtu.be/iMyCdd5nP5U>
 
+# When done, `dbDisconnect`
+
+Whenever you are done working with a database, you should disconnect from it: 
+
+```{r}
+dbDisconnect(db)
+```
+
+- This closes the connection, discards all pending work, and frees resources
+
 # Wrap Up
 
 Save some information about the session for reproducibility.
@@ -1311,7 +1401,6 @@ Save some information about the session for reproducibility.
 #| code-fold: true
 #| code-summary: "Show Session Info"
 sessionInfo()
-dbDisconnect(db)
 ```
 
 
