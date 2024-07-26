@@ -1370,13 +1370,6 @@ It depends!
 
 There is an interesting video discussing the question in more detail here: <https://youtu.be/gdzONbwfWk0>
 
-## Execises 4
-
-1. Right join `results_state` and `facts` using `dbplyr` instead of `dbGetQuery`
-2. Recreate the table `results_state_time` by querying and joining from db (using `dbplyr` instead of `dbGetQuery`).
-3. Recreate `results_state_facts` using `dbplyr`. Don't forget to add `total_votes` and `pct_votes`
-4. Extract the SQL query from your code in 1. and run it with `dbGetQuery`
-
 # Homework
 
 Tomorrow, we will use the software Docker to simulate a database server. Install the software and make sure it works. You can follow the guide I made here:

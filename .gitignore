@@ -28,6 +28,7 @@ test.qmd
 04_Linking_and_joining_data_SQL/media/venn_only.pdf
 04_Linking_and_joining_data_SQL/data/db_nyc.sql
 04_Linking_and_joining_data_SQL/notes.md
+05_Scaling_Reporting_and_Database_Software/data/docker-compose-amcat.yml
 
 05_solutions.qmd
 06_solutions.qmd

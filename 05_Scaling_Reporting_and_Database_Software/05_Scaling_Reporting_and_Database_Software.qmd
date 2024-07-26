@@ -6,14 +6,793 @@ date: 2024-07-26
 format:
   revealjs:
     smaller: true
+    width: 1600
+    height: 900
     scrollable: true
     code-line-numbers: true
     slide-number: c/t
-    logo: https://essexsummerschool.com/wp-content/uploads/2016/03/essex_logo-mobile.svg
-    self-contained: true
+    logo: ../ess_logo.png
+    embed-resources: true
+bibliography: ../references.bib
 execute:
-  cache: true
+  cache: false
   echo: true
-highlight-style: pygments
+  eval: true
+engine: knitr
+highlight-style: nord
 ---
+
+# Introduction
+## This Course
+
+<center>
+```{r setup}
+#| echo: false
+#| message: false
+library(tinytable)
+library(tidyverse)
+tibble::tribble(
+  ~Day, ~Session,
+  1,  "Introduction",
+  2,  "Data Structures and Wrangling",
+  3,  "Working with Files",
+  4,  "Linking and joining data & SQL",
+  5,  "Scaling, Reporting and Database Software",
+  6,  "Introduction to the Web",
+  7,  "Static Web Pages",
+  8,  "Application Programming Interface (APIs) ",
+  9,  "Interactive Web Pages",
+  10, "Building a Reproducible Research Project",
+) |> 
+  tt() |> 
+  style_tt() |> 
+  style_tt(i = 5, background = "#FDE000")
+```
+</center>
+
+## The Plan for Today
+
+:::: {.columns}
+
+::: {.column width="60%"}
+In this session, you learn:
+
+- Repetition: DBMS
+- Working with PostgreSQL
+- Working with text databases
+- Benchmarking
+- Final scaling tips
+:::
+
+::: {.column width="30%" }
+![](https://images.unsplash.com/photo-1607720146778-68d2d56fa38c?q=80&w=2576&auto=format&fit=crop)
+[Nik](https://unsplash.com/@helloimnik) via unsplash.com
+:::
+::::
+
+
+# Databases
+## DBMS: servers and clients
+
+:::: {.columns}
+::: {.column width="50%"}
+::: {.incremental}
+- most DBMS are set up in client-server architecture:
+  + server: can be a computer somewhere or a process on your own computer that fullfills requests
+  + DBMS server: contains the database and database management system
+  + client: interacts with server (sends requests, receives responses)
+  + DBMS client: can upload and retrieve data from server or send processing instructions
+- Why though:
+  + server can run on more powerful hardware somewhere else
+  + requests from multiple users don't interfere with each other
+  + access control per user to support different roles
+:::
+:::
+::: {.column .cropped width="50%" }
+```{r}
+#| echo: false
+#| out-width: "90%"
+#| fig-cap: |
+#|   Interacting with a database management system from @weidmann_data_2023, p. 105.
+
+knitr::include_graphics("../04_Linking_and_joining_data_SQL/media/dbms.png")
+```
+:::
+::::
+
+## Got Server?
+
+![](media/server.jpeg)
+
+::: {.fragment .fade-in .absolute top="10%" width="70%"}
+![](https://www.realvnc.com/wp-content/uploads/2022/03/Headless-Raspberry-Pi-VNC-Connect.jpg)
+:::
+
+::: {.fragment .fade-in .absolute top="20%" width="80%"}
+![https://azure.microsoft.com/en-us/free/](media/azure-free.png)
+:::
+
+::: {.fragment .fade-in .absolute top="20%" width="80%"}
+![](media/docker-desktop.png)
+:::
+
+## RDBMS software
+
+- many popular choices alternatives:
+  + Oracle Database
+  + MySQL
+  + Microsoft SQL Server
+  + IBM Db2
+  + Microsoft Access
+  + SQLite (free software)
+  + MariaDB (free software)
+- all use slightly different dialects of `SQL`, but the core functionality is the same
+- We will use `PostgreSQL`: free and open source, well-known, and many other programming languages and tools can interface to it
+
+
+# Working with PostgreSQL
+## Installation
+
+:::: {.columns}
+
+::: {.column width="60%"}
+We are using Docker to spin up a local server that has PostgreSQL already installed.
+
+You have to type this into your **Terminal**(!):
+
+```sh
+docker-compose -f 05_Scaling_Reporting_and_Database_Software/data/docker-compose.yml up -d
+```
+
+This is running the compose file below:
+
+```yml
+services:
+  postgres:
+    image: postgres
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: pgpasswd
+      POSTGRES_DB: dbintro
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+```
+
+:::
+
+::: {.column width="30%" }
+![](media/terminal.png)
+:::
+::::
+
+## Connecting from `R`
+
+```{r}
+library(DBI)
+library(RPostgres)
+db <- dbConnect(
+  Postgres(),
+  dbname = "dbintro",
+  host = "localhost",  # Make sure to specify the host
+  port = 5432L,
+  user = "postgres",
+  password = "pgpasswd"
+)
+```
+
+```{r}
+#| echo: false
+# To make sure this produces the same results every time, I remove all users and tables from the database
+tables <- dbListTables(db)
+for (t in tables) {
+  dbExecute(db, paste("DROP TABLE", t))
+}
+user <- dbGetQuery(db, "SELECT usename FROM pg_user") |> 
+  pull(usename) |> 
+  setdiff("postgres")
+for (u in user) {
+  dbExecute(db, paste("DROP USER", u))
+}
+```
+
+Let's fill this database with the `nycflights13` flights data:
+
+```{r}
+library(nycflights13)
+dbWriteTable(db, "airports", airports, overwrite = TRUE)
+dbWriteTable(db, "flights", flights, overwrite = TRUE)
+dbWriteTable(db, "weather", weather, overwrite = TRUE)
+dbWriteTable(db, "planes", planes, overwrite = TRUE)
+dbWriteTable(db, "airlines", airlines, overwrite = TRUE)
+```
+
+## Connecting from the terminal
+
+:::: {.columns}
+
+::: {.column width="60%"}
+```sh
+docker exec -it -u postgres postgres_db psql
+```
+
+Inside the Docker container (that is the name of a server running via docker), you can list tables with:
+
+```SQL
+\dt
+```
+
+You can run `SQL` operations in here without `R`:
+
+```SQL
+SELECT * FROM airports;
+#                     ^
+```
+
+Note that commands are only executed when `SQL` encounters a `;`!
+
+- Exit a long print with `q`
+:::
+
+::: {.column width="30%" }
+![](media/sql_terminal.png)
+:::
+::::
+
+## Working with `PostgreSQL`: pretty similar to SQLite...
+
+But not the same...
+
+```{r}
+#| echo: false
+# just to make sure the tables do not exist already
+try(dbExecute(db, "DROP TABLE df1"))
+try(dbExecute(db, "DROP TABLE df2"))
+```
+
+
+```{r}
+dbExecute(db,
+          "CREATE TABLE df1 (
+              id SERIAL PRIMARY KEY,
+              capital_letters VARCHAR(1) CHECK (capital_letters ~ '^[A-Z]$'), 
+              my_date DATE CHECK (my_date > '2000-01-01')
+          )")
+```
+
+## Working with `PostgreSQL` and `dbplyr`: the same as `SQLite`
+
+I copied this from the last session, and it works just as well:
+
+```{r}
+#| output-location: column
+tbl(db, "flights") |> 
+  inner_join(tbl(db, "planes"), by = "tailnum", suffix = c("", "_plane")) |> 
+  mutate(plane_age = year - year_plane) |> 
+  select(arr_delay, plane_age) |> 
+  filter(!is.na(arr_delay),
+         !is.na(plane_age)) |> 
+  collect() |> 
+  group_by(plane_age) |> 
+  summarise(avg_delay = mean(arr_delay)) |> 
+  ggplot(aes(x = plane_age, y = avg_delay)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ x)
+```
+
+
+## User-based authentication
+
+Imagine this:
+
+- you have a team of researchers
+- some are responsible for data gathering (annotation, webscraping, conducting survey waves, etc.)
+- some are responsible for data analysis
+- you are responsible for data management and public reporting
+- You want to make sure that:
+  - researchers in team gathering do not overwrite each others changes
+  - team analysis always has the newest data
+  - the summary data on the website is online as soon as possible
+- with `PostgreSQL` you can make sure the two groups don disrupt each other and the most recent results are pull from the database automatically
+
+## User-based authentication: users
+
+We create three new users:
+
+- one for the one researchers in the gatherer group
+- one for the one analyser in the analysis group
+- one called "reader" which represents the general public
+
+
+```{r}
+dbExecute(db, "CREATE USER gatherer WITH ENCRYPTED PASSWORD 'supersecret'")
+dbExecute(db, "CREATE USER analyser WITH ENCRYPTED PASSWORD 'supersecret'")
+dbExecute(db, "CREATE USER reader WITH ENCRYPTED PASSWORD 'supersecret'")
+```
+
+We can look at users:
+
+```{r}
+dbGetQuery(db, "SELECT usename FROM pg_user")
+```
+
+## User-based authentication: users
+
+Let's log in as analyser:
+
+```{r}
+db_analyser <- dbConnect(
+  Postgres(),
+  dbname = "dbintro",
+  host = "localhost",  # Make sure to specify the host
+  port = 5432L,
+  user = "analyser",
+  password = "supersecret"
+)
+```
+
+
+## User-based authentication: roles
+
+So far, neither of the new users can do anything:
+
+```{r}
+#| error: true
+tbl(db_analyser, "flights")
+```
+
+They have to be assigned roles first
+
+## User-based authentication: roles
+
+We first give the "gatherer" user permission to update a table:
+
+```{r}
+dbExecute(db, "GRANT UPDATE,INSERT ON flights TO gatherer")
+```
+
+Since we do not fully trust the analyser, we give him read-only access to flights, but access to everything in `df1`, which we pretend that the results of the analysis are stored in:
+
+```{r}
+dbExecute(db, "GRANT SELECT ON flights TO analyser")
+dbExecute(db, "GRANT ALL PRIVILEGES ON df1 TO analyser")
+```
+
+Finally, the public gets selected access to only some columns in the results table:
+
+```{r}
+dbExecute(db, "GRANT SELECT (capital_letters) ON df1 TO reader")
+```
+
+## User-based authentication: roles (analyser)
+
+Still logged in as the analyser, let's try to access the data again:
+
+```{r}
+tbl(db_analyser, "flights")
+```
+
+But we still can't make changes:
+
+```{r}
+#| error: true
+dbExecute(db_analyser,
+          "INSERT INTO flights (year)
+            VALUES (2013)")
+```
+
+## User-based authentication: roles (gatherer)
+
+Logging in as the gatherer, we can add new cases:
+
+```{r}
+db_gatherer <- dbConnect(
+  Postgres(),
+  dbname = "dbintro",
+  host = "localhost",  # Make sure to specify the host
+  port = 5432L,
+  user = "gatherer",
+  password = "supersecret"
+)
+dbExecute(db_gatherer,
+          "INSERT INTO flights (year)
+            VALUES (2013)")
+```
+
+## User-based authentication: roles (reader)
+
+Logging in as the reader, we can can't change anything, but can only read specific columns:
+
+```{r}
+db_reader <- dbConnect(
+  Postgres(),
+  dbname = "dbintro",
+  host = "localhost",  # Make sure to specify the host
+  port = 5432L,
+  user = "reader",
+  password = "supersecret"
+)
+```
+
+```{r}
+#| error: true
+dbGetQuery(db_reader, "SELECT * FROM df1")
+```
+
+```{r}
+dbGetQuery(db_reader, "SELECT capital_letters FROM df1")
+```
+
+Now we could give out this user to the public without the need to worry that they change or read anything they are not supposed to.
+
+
+## Exercises 1
+
+Using the `PostgreSQL` database or the `SQLite` database from session 4:
+
+1. Right join `results_state` and `facts` using `dbplyr` instead of `dbGetQuery`
+2. Recreate the table `results_state_time` by querying and joining from db (using `dbplyr` instead of `dbGetQuery`).
+3. Recreate `results_state_facts` using `dbplyr`. Don't forget to add `total_votes` and `pct_votes`
+4. Extract the SQL query from your code in 1. and run it with `dbGetQuery`
+
+# Working with text data in AmCAT
+## Why AmCAT
+
+:::: {.columns}
+::: {.column width="60%"}
+- Optimized to store, annotate, preprocess, search, share and present **text** data collections
+- For teams or individual researchers
+- Fine-grained access control
+- Free and Open Source
+:::
+::: {.column width="30%" }
+![](media/amcat_hex.png)
+:::
+::::
+
+## Installation
+
+Same as with `PostgreSQL`, we can use Docker.
+
+1. Download the compose file:
+
+```{r}
+curl::curl_download(
+  url = "https://raw.githubusercontent.com/ccs-amsterdam/amcat4docker/main/docker-compose.yml", 
+  destfile = "data/docker-compose-amcat.yml"
+)
+```
+
+2. Spin it up via the Terminal
+
+```sh
+docker-compose -f 05_Scaling_Reporting_and_Database_Software/data/docker-compose-amcat.yml up -d
+```
+
+## Connecting from the terminal
+
+Creating a test index:
+
+```sh
+docker exec -it amcat4 amcat4 create-test-index
+```
+
+Configure the AmCAT server:
+
+```sh
+docker exec -it amcat4 amcat4 config
+```
+
+
+## Connecting from `R`
+
+We need to log in, which you can do without a user by default:
+
+```{r}
+# remotes::install_github("ccs-amsterdam/amcat4r")
+library(amcat4r)
+amcat_login("http://localhost/amcat")
+```
+
+We can have a look at the example corpus with:
+
+```{r}
+query_documents(index = "state_of_the_union")
+```
+
+
+## Dataset
+
+Load data from @ParlSpeech into AmCAT:
+
+```{r}
+#| eval: false
+corp_hoc_df <- readRDS("../03_Working_with_Files/data/Corp_HouseOfCommons_V2.rds") |> 
+  mutate(date = as.Date(date)) |> 
+  rename(title = agenda) |> 
+  filter(!is.na(date)) |> 
+  replace_na(list(title = "", text = "")) |> 
+  select(-party.facts.id)
+
+# define types of fields
+fields = list(
+  date = "date",
+  text = "text",
+  title = "text",        
+  speechnumber = "integer",   
+  speaker = "keyword",       
+  party = "keyword",
+  chair = "boolean",      
+  terms = "integer",          
+  parliament = "keyword", 
+  iso3country = "keyword"
+)
+# create the index
+create_index(index = "houseofcommons", 
+             name = "House Of Commons", 
+             description = "HouseOfCommons", 
+             create_fields = fields)
+
+# upload the data
+upload_documents("houseofcommons", documents = corp_hoc_df, chunk_size = 1000, verbose = TRUE)
+```
+
+## AmCAT GUI
+
+- Access at: <http://localhost/>
+- Search and explore data
+- Queries are made in Elasticsearch's “mini-language” for query strings (<https://bit.ly/elastic_queries>)
+- Let's see some examples!
+
+
+::: {.fragment}
+<div class="tenor-gif-embed" data-postid="25603936" data-share-method="host" data-aspect-ratio="1.56863" data-width="40%"><a href="https://tenor.com/view/tom-and-jerry-searching-gif-25603936">Tom And Jerry Searching GIF</a>from <a href="https://tenor.com/search/tom+and+jerry+searching-gifs"></a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+:::
+
+::: {.notes}
+Summary:
+
+- migration
+- migra*
+- *migra*
+- *migra* OR refu*
+- *migra* OR refu* OR *asyl*
+- (*migra* OR refu* OR *asyl*) AND illegal
+- (*migra* OR refu* OR *asyl*) NOT illegal
+- migra=*migra* OR refu* OR *asyl*
+  illegal=(*migra* OR refu* OR *asyl*) AND illegal
+  not_illegal=(*migra* OR refu* OR *asyl*) NOT illegal
+
+The queries are made in the elasticsearch query language
+https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#query-string-query-notes
+:::
+
+## AmCAT API
+
+:::: {.columns}
+::: {.column width="60%" style="font-size:90%; "}
+- R and Python packages
+- OpenAPI specifications
+- Search, upload, download, modify data (e.g., add keywords/categories)
+- User and access management
+- Easy way to make research reproducible by querying data for analysis
+- Great for larger than memory datasets
+:::
+::: {.column width="35%"}
+<iframe src="https://giphy.com/embed/o0vwzuFwCGAFO" width="480" height="480" frameBorder="0" class="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/cat-hacker-webs-o0vwzuFwCGAFO"></a></p>
+:::
+:::: 
+
+## AmCAT API
+
+```{r}
+query_documents(index = "houseofcommons", queries = "*Europ*")
+query_documents(index = "houseofcommons", queries = '"European Union" OR EU')
+```
+
+```{r}
+query_aggregate(index = "houseofcommons", 
+                axes = list(list(field="party", list(field="date", interval="year"))),
+                queries = '"European Union" OR EU')
+```
+
+
+## Access Control in Amcat4 enables Non-Consumptive Research
+
+::: {.incremental}
+- Sharing data helps scientific progress!
+- Copyright and/or (privacy-)sensitive material can not be easily shared
+- Definition: non-consumptive research involves the **use of computational methods** to analyze data **without giving access to the data itself**
+:::
+
+![](media/non-consumptive.png){.fragment .fade-in .absolute top="10%" width="70%"}
+
+![](media/nonconsumptive_amcat1.png){.fragment .fade-in .absolute top="10%" width="80%"}
+
+![](media/nonconsumptive_amcat2.png){.fragment .fade-in .absolute top="10%" width="80%"}
+
+::: {.notes}
+- In practice, you already know this from Google Books
+- show in browser y setting metareader
+:::
+
+
+# Scaling your research
+## Benchmarking
+
+- when your data grows, it becomes important that your code is fast, since it is applied to many cases
+- benchmarking helps you identify bottlenecks
+- it can make the difference between minutes and days whether your code is optimised for speed
+
+## Benchmarking with `bench`
+
+Basic syntax:
+
+1. define functions that wrap your code
+
+```{r}
+library(bench)
+fun1 <- function() {
+  1 + 1
+}
+fun2 <- function() {
+  a <- 1
+  b <- 1
+  sum(c(a, b))
+}
+```
+
+2. run `mark`
+
+```{r}
+res <- mark(simple = fun1, complex = fun1)
+```
+
+3. check summary
+
+```{r}
+summary(res)
+summary(res, relative = TRUE)
+```
+
+
+## Benchmarking: in memory vs in database
+
+1. define functions that wrap your code
+
+```{r}
+in_memory <- function() {
+  nycflights13::flights |> 
+    inner_join(nycflights13::weather, by = c("time_hour", "origin")) |> 
+    filter(time_hour < "2013-03-01")
+}
+
+in_db <- function() {
+  tbl(db, "flights") |> 
+    inner_join(tbl(db, "weather"), by = c("time_hour", "origin")) |> 
+    filter(time_hour < "2013-03-01") |> 
+    collect()
+}
+```
+
+2. run `mark`
+
+```{r}
+res <- mark(in_memory = in_memory, in_db = in_db, check = FALSE, iterations = 15)
+```
+
+3. check summary
+
+```{r}
+summary(res)
+summary(res, relative = TRUE)
+```
+
+## Fix bottlenecks
+
+Without an index, the search in the database takes longer.
+You can create it automatically with `opy_to()` (see [this](https://dbplyr.tidyverse.org/articles/dbplyr.html?q=nyc#connecting-to-the-database))
+
+```{r}
+dbExecute(db, "CREATE INDEX ON flights (time_hour)")
+dbExecute(db, "CREATE INDEX ON weather (time_hour)")
+```
+
+1. define functions that wrap your code
+
+```{r}
+in_memory <- function() {
+  nycflights13::flights |> 
+    inner_join(nycflights13::weather, by = c("time_hour", "origin")) |> 
+    filter(time_hour < "2013-03-01")
+}
+
+in_db <- function() {
+  tbl(db, "flights") |> 
+    inner_join(tbl(db, "weather"), by = c("time_hour", "origin")) |> 
+    filter(time_hour < "2013-03-01") |> 
+    collect()
+}
+```
+
+2. run `mark`
+
+```{r}
+res <- mark(in_memory = in_memory, in_db = in_db, check = FALSE, iterations = 15)
+```
+
+3. check summary
+
+```{r}
+summary(res)
+summary(res, relative = TRUE)
+```
+
+# Data Management: Summary
+## What for?
+
+- enables new research questions by being able to combine and clean new data
+- let's you sleep easy at night
+- makes your work transparent to others and yourself
+- thinking about reproducibility from the start
+
+## When to use files vs. databases
+
+- often not clear from the start
+- working with files is easier as a solo researchers (who keeps a clean project directory)
+- when data changes regularly it makes sense to not add to the same file again and again
+- when several researchers collaborate, a database solves many issues
+- when you have text data, vectors, or complex elements, NoSQL databases like AmCAT or MongoDB can make sense
+
+# When done, `dbDisconnect`
+
+Whenever you are done working with a database, you should disconnect from it: 
+
+```{r}
+dbDisconnect(db)
+dbDisconnect(db_analyser)
+dbDisconnect(db_gatherer)
+dbDisconnect(db_reader)
+```
+
+- This closes the connection, discards all pending work, and frees resources
+
+
+# Wrap Up
+
+Save some information about the session for reproducibility.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show Session Info"
+sessionInfo()
+```
+
+
+<!-- This is just some extra CSS code to make presentation look pretty -->
+```{css}
+#| echo: false
+.table-striped {
+  > tbody > tr:nth-of-type(odd) > * {
+    background-color: #fff9ce;
+  }
+}
+.table-hover {
+  > tbody > tr:hover > * {
+    background-color: #ffe99e; /* Adjust this color as needed */
+  }
+}
+.reveal section img { 
+    background: rgba(255, 255, 255, 0.12); 
+    border: 4px solid #eeeeee;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.15) 
+}
+```
+
+# References
 
