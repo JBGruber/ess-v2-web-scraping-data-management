@@ -621,6 +621,7 @@ There are quite a lot of [CSS selectors](https://www.w3schools.com/cssref/css_se
 | element,element | `tr,p`            | **all** `<tr>` elements AND **all** `<pr>` elements        |
 | class1 tag      | `.table-1 tr`     | **all** `<tr>` elements that are descendants of `.table-1` |
 | class1 > tag    | `.table-1 > tr`   | **all** `<tr>` elements that with `.table-1` as parent     |
+| class1 + tag    | `.table-1 + a`   | the `<a>` element directly following an element `.table-1`  |
 
 ## Family Relations
 
