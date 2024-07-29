@@ -1,0 +1,124 @@
+---
+title: "solutions session 5"
+format: html
+---
+
+## Exercises 1
+
+Using the `PostgreSQL` database or the `SQLite` database from session 4:
+
+1. Right join `results_state` and `facts` using `dbplyr` instead of `dbGetQuery`
+
+- If you wanted to use the `SQLite` database from session 4, you first need to establish the connection
+
+```{r}
+library(DBI)
+library(RSQLite)
+library(tidyverse)
+db <- dbConnect(SQLite(), "../04_Linking_and_joining_data_SQL/data/db.sql")
+```
+
+- Note that this will only work if you have previously completed Exercise 3.1 from session 4 (Add the three `data.frames` from the 2016 primaries case study to the database (`schedule`, `results_state`, and `facts`))
+
+```{r}
+# this part is from session 4 where we loaded the data
+library(rio)
+csv_folder_url <- "https://raw.githubusercontent.com/houstondatavis/data-jam-august-2016/master/csv"
+results <- import(paste(csv_folder_url, "primary_results.csv", sep = "/"))
+schedule <- import(paste(csv_folder_url, "primary_schedule.csv", sep = "/"))
+facts <- import(paste(csv_folder_url, "county_facts.csv", sep = "/")) |>
+  select(area_name,
+    population = Pop_2014_count,
+    pop_change = Pop_change_pct,
+    over65 = Age_over_65_pct,
+    female = Sex_female_pct,
+    white = Race_white_pct,
+    college = Pop_college_grad_pct,
+    income = Income_per_capita
+  )
+results_state <- results %>% 
+  group_by(state, party, candidate) %>% 
+  summarize(votes = sum(votes))
+
+# this is the solution from 3.1 in session 4
+dbWriteTable(conn = db, name = "schedule", value = schedule)
+dbWriteTable(conn = db, name = "results_state", value = results_state)
+dbWriteTable(conn = db, name = "facts", value = facts)
+```
+
+
+```{r}
+tbl(db, "results_state") |> 
+  right_join(tbl(db, "facts"), by = c("state" = "area_name"))
+```
+
+
+2. Recreate the table `results_state_time` by querying and joining from db (using `dbplyr` instead of `dbGetQuery`).
+
+```{r}
+results_state_time <- tbl(db, "results_state") |> 
+  inner_join(tbl(db, "schedule"), by = c("state", "party"))
+results_state_time
+```
+
+
+
+3. Recreate `results_state_facts` using `dbplyr`. Don't forget to add `total_votes` and `pct_votes`
+
+```{r}
+results_state_facts <- tbl(db, "results_state") |> 
+  inner_join( tbl(db, "schedule"), by = c("state", "party"))|> 
+  group_by(state, party) |> 
+  mutate(total_votes = sum(votes), 
+         pct_votes = votes / total_votes) |> 
+  ungroup() |> 
+  collect()
+```
+
+
+4. Extract the SQL query from your code in 3. and run it with `dbGetQuery`
+
+```{r}
+results_state_query <- tbl(db, "results_state") |> 
+  inner_join( tbl(db, "schedule"), by = c("state", "party")) |> 
+  group_by(state, party) |> 
+  mutate(total_votes = sum(votes), 
+         pct_votes = votes / total_votes) |> 
+  ungroup() |> 
+  show_query()
+
+
+query <- "SELECT
+  `state`,
+  `party`,
+  `candidate`,
+  `votes`,
+  `total_votes`,
+  `votes` / `total_votes` AS `pct_votes`,
+  `date`,
+  `type`
+FROM (
+  SELECT
+    `state`,
+    `party`,
+    `candidate`,
+    `votes`,
+    SUM(`votes`) OVER (PARTITION BY `state`, `party`) AS `total_votes`,
+    `pct_votes`,
+    `date`,
+    `type`
+  FROM (
+    SELECT `results_state`.*, `date`, `type`
+    FROM `results_state`
+    INNER JOIN `schedule`
+      ON (
+        `results_state`.`state` = `schedule`.`state` AND
+        `results_state`.`party` = `schedule`.`party`
+      )
+  ) AS `q01`
+) AS `q01`"
+
+dbGetQuery(db, query)
+```
+
+

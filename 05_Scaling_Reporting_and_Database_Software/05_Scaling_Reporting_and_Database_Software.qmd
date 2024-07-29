@@ -1,6 +1,6 @@
 ---
-title: "Introduction to Web Scraping and Data Management for Social Scientists"
-subtitle: "Session 5:	Scaling, Reporting and Database Software"
+title: "Session 5:	Scaling, Reporting and Database Software"
+subtitle: "Introduction to Web Scraping and Data Management for Social Scientists"
 author: "Johannes B. Gruber"
 date: 2024-07-26
 format:
@@ -438,7 +438,7 @@ Using the `PostgreSQL` database or the `SQLite` database from session 4:
 1. Right join `results_state` and `facts` using `dbplyr` instead of `dbGetQuery`
 2. Recreate the table `results_state_time` by querying and joining from db (using `dbplyr` instead of `dbGetQuery`).
 3. Recreate `results_state_facts` using `dbplyr`. Don't forget to add `total_votes` and `pct_votes`
-4. Extract the SQL query from your code in 1. and run it with `dbGetQuery`
+4. Extract the SQL query from your code in 3. and run it with `dbGetQuery`
 
 # Working with text data in AmCAT
 ## Why AmCAT
