@@ -49,5 +49,6 @@ rlang::check_installed("remotes")
 # install some experimental packages
 if (!rlang::is_installed("paperboy")) remotes::install_github("JBGruber/paperboy")
 if (!rlang::is_installed("playwrightr")) remotes::install_github("JBGruber/playwrightr")
+if (!rlang::is_installed("amcat4r")) remotes::install_github("ccs-amsterdam/amcat4r")
 rlang::check_installed(attachment::att_from_qmds(path = ".", recursive = TRUE))
 ```
