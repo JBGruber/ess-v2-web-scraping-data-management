@@ -1,24 +1,55 @@
 ---
-title: "Introduction to Web Scraping and Data Management for Social Scientists"
-subtitle: "Session 6: Introduction to the Web"
+title: "Session 6: Introduction to the Web"
+subtitle: "Introduction to Web Scraping and Data Management for Social Scientists"
 author: "Johannes B. Gruber"
 date: 2024-07-29
+from: markdown+emoji
 format:
   revealjs:
     smaller: true
+    width: 1600
+    height: 900
     scrollable: true
     code-line-numbers: true
     slide-number: c/t
-    logo: https://essexsummerschool.com/wp-content/uploads/2016/03/essex_logo-mobile.svg
-    self-contained: true
+    logo: ../ess_logo.png
+    embed-resources: true
+bibliography: ../references.bib
 execute:
   cache: true
   echo: true
-highlight-style: pygments
-bibliography: ../references.bib
+engine: knitr
+highlight-style: nord
 ---
 
 # Introduction
+## This Course
+
+<center>
+```{r setup}
+#| echo: false
+#| message: false
+library(tinytable)
+library(tidyverse)
+tibble::tribble(
+  ~Day, ~Session,
+  1,  "Introduction",
+  2,  "Data Structures and Wrangling",
+  3,  "Working with Files",
+  4,  "Linking and joining data & SQL",
+  5,  "Scaling, Reporting and Database Software",
+  6,  "Introduction to the Web",
+  7,  "Static Web Pages",
+  8,  "Application Programming Interface (APIs) ",
+  9,  "Interactive Web Pages",
+  10, "Building a Reproducible Research Project",
+) |> 
+  tt() |> 
+  style_tt() |> 
+  style_tt(i = 6, background = "#FDE000")
+```
+</center>
+
 ## The Plan for Today
 
 :::: {.columns}
@@ -42,6 +73,7 @@ We will:
 :::
 
 ::::
+
 
 # What is Web Scraping
 ## Forms to get data from the web
@@ -68,22 +100,29 @@ We will:
 
 ## Web Scraping
 
-::: {.incremental}
-- A technique to extract specific data from a web page
-  - Get the author, title, date and body of an online news article
-  - A table from a website (like Wikipedia)
-- This can include hyperlinks which you can systematically go through
-- You can write a "robot" that systematically extracts data and saves it in a format convenient for analysis
-  - All news about a specific topic from a news site
-  - All press releases from a political party website
-  - All Posts on a web forum about a specific topic
-  - All participants of an event from the event's website
-- A web-scraper is a program that goes to web pages, downloads the contents, extracts data out of the contents and then saves the data to a file or a database
-- Unfortunately not one-size-fits-all solution
-  - Lots of different techniques, tools, tricks
-  - Websites change (some more frequently than others)
-  - Some websites make it hard for you (by accident or on purpose!)
+:::: {.columns}
+
+::: {.column width="70%" .incremental}
+- Used when other means are unavailable
+- Scrape the (unstructured) Data from a website
+  - E.g: get the author, title, date and body of an online news article
+  - E.g: get a table from a website (like Wikipedia)
+  - E.g: get all entries from a blog
+  - E.g: get all press statements from a political party website
+  - E.g: get all hyperlinks to files on a website
+- A web-scraper is a program (or robot) that:
+  - goes to a web page
+  - downloads its content
+  - extracts data from the content
+  - then saves the data to a file or a database
 :::
+
+::: {.column width="30%"}
+
+![](media/raw-html.jpg)
+
+:::
+::::
 
 ## Web Scraping: A Three-Step Process
 
@@ -98,12 +137,16 @@ We will:
 :::: {.columns}
 
 ::: {.column width="40%" .incremental}
-Some web pages are easier to scrape than others:
+- Unfortunately no one-size-fits-all solution
+  - Lots of different techniques, tools, tricks
+  - Websites change (some more frequently than others)
+- Some web pages are easier to scrape than others (by accident or on purpose!):
 
 1. Well behaved static HTML with recurring patterns
 2. Haphazard HTML not clearly differentiating between different types of information
 3. Interactive web sites loading content by executing code (usually JavaScript or PHP)
 4. Interactive web sites with mechanisms against data extraction (rate limits, captchas etc.)
+5. Collecting raw data might be limited, data wrangling might be made difficult
 :::
 
 ::: {.column width="60%"}
@@ -115,7 +158,7 @@ Some web pages are easier to scrape than others:
 
 :::: {.columns}
 
-::: {.column width="50%"}
+::: {.column width="60%"}
 - The internet is a data gold mine!
 - Data was not created for research, but are often traces of what people are *actually* doing on the internet
 - Reproducible and renewable data collection (e.g., rehydrate data that is copyrighted)
@@ -126,11 +169,32 @@ Some web pages are easier to scrape than others:
   - The return is good data to further your career (unlike sudokus or video games)
 :::
 
-::: {.column width="50%"}
-![\@realDonaldTrump Twitter usage @clarketrump2019](https://journals.plos.org/plosone/article/figure/image?size=large&id=10.1371/journal.pone.0222062.g002)
+::: {.column width="40%"}
+![](media/treasure.jpg)
 :::
 ::::
 
+## Found vs Designed Data
+
+:::: {.columns}
+
+::: {.column width="50%"}
+### Designed Data
+
+- Collected for research
+- Full control of shape and form
+- Problems of validity due to social desirability and imperfect estimation problems
+:::
+
+::: {.column width="50%" }
+### Found Data
+
+- Traces of human behavior
+- Comes in all shapes and forms
+- Problems of validity as not representative and incomplete access
+:::
+
+::::
 
 # Implications of Web Scraping
 ## Legal
@@ -150,7 +214,7 @@ Web Scraping is not a shady or illegal activity, **but** not all web scraping is
   - "there have been no lawsuits in [...] major western democratic countries stemming from a researcher scraping publicly accessible data from a website for personal or academic use." [@luscombewebscraping2022]
 - Honouring Terms of Service and robots.txt
   - Many companies have ToS that might prohibit you from scraping (these are not laws, might not be binding and whether they can be enforced is a separate question)
-  - /robots.txt is often where guidelines are communicated to automated crawlers
+  - /robots.txt is often where guidelines are communicated to automated crawlers (these are not legally binding either)
 :::
 
 ## ToS and Robots.txt
@@ -184,9 +248,9 @@ Legal and ethical advice is rare and complicated to give.
 A good *opinion* piece about it is @freelonAPI2018.
 It is worth reading, but can be summarised in three general pieces of advice
 
-- use authorized methods whenever possible
-- do not confuse terms of service compliance with data protection
-- understand the risks of violating terms of service
+- Use authorized methods whenever possible
+- Do not confuse terms of service compliance with data protection
+- Understand the risks of violating terms of service
 
 ## Exercises 1
 
@@ -450,6 +514,13 @@ Browser View:
 :::
 ::::
 
+## Exercises 2
+
+1. Add another image and another paragraph to `data/example.html` and display it in your browser
+2. Add a second level headline to the page
+3. Add another image to the page
+4. Manipulate the files `data/example.html` and/or `data/example.css` so that "content" is displayed in italics
+
 # HTMl and CSS in Web Scraping: a preview
 ## Using HTML tags:
 
@@ -540,16 +611,16 @@ read_html("data/example.html") |>
 
 There are quite a lot of [CSS selectors](https://www.w3schools.com/cssref/css_selectors.asp), but often you can stick to just a few:
 
-| selector      | example           | Selects                                                |
-|---------------|-------------------|--------------------------------------------------------|
-| element/tag   | `table`           | **all** `<table>` elements                             |
-| class         | `.someTable`      | **all** elements with `class="someTable"`              |
-| id            | `#table-1`        | **unique** element with `id="table-1"`                 |
-| element.class | `tr.headerRow`    | **all** `<tr>` elements with the `someTable` class     |
-| element.class | `tr.headerRow`    | **all** `<tr>` elements with the `someTable` class     |
-| class1.class2 | `.someTable.blue` | **all** elements with the `someTable` AND `blue` class |
-| class1 > tag  | `.table-1 > tr`   | **all** elements with `tr` with `.table-1` as parent   |
-| class1 + tag  | `.top-row + tr`   | **first** elements with `tr` following `.top-row`      |
+| selector        | example           | Selects                                                    |
+|-----------------|-------------------|------------------------------------------------------------|
+| element/tag     | `table`           | **all** `<table>` elements                                 |
+| class           | `.someTable`      | **all** elements with `class="someTable"`                  |
+| id              | `#table-1`        | **unique** element with `id="table-1"`                     |
+| element.class   | `tr.headerRow`    | **all** `<tr>` elements with the `headerRow` class         |
+| class1.class2   | `.someTable.blue` | **all** elements with the `someTable` AND `blue` class     |
+| element,element | `tr,p`            | **all** `<tr>` elements AND **all** `<pr>` elements        |
+| class1 tag      | `.table-1 tr`     | **all** `<tr>` elements that are descendants of `.table-1` |
+| class1 > tag    | `.table-1 > tr`   | **all** `<tr>` elements that with `.table-1` as parent     |
 
 ## Family Relations
 
@@ -588,13 +659,9 @@ To keep track of the relations we speak of ancestors, descendants, parents, chil
 ```
 
 
-## Exercises 2
+## Exercises 3
 
-1. Add another image and another paragraph to `data/example.html` and display it in your browser
-2. Add a second level headline to the page
-3. Add another image to the page
-4. Manipulate the files `data/example.html` and/or `data/example.css` so that "content" is displayed in italics
-5. Practice finding the right selector with the CSS Diner game (<https://flukeout.github.io/>)
+1. Practice finding the right selector with the CSS Diner game: <https://flukeout.github.io/>
 6. Consider the toy HTML example below. Which selectors do you need to put into `html_elements()` (which extracts all elements matching the selector) to extract the information
 
 
@@ -652,15 +719,6 @@ bullet_point_three_ordered <- html_elements(webpage, "")
 bullet_point_three_ordered
 ```
 
-
-# Homework
-
-You did not come to class to just scrape exercise pages.
-You probably had some initial data and/or research question in mind.
-Please write a short abstract (~200-400 words) on what you want to accomplish with the web scraping skill you will learn here, so we can try and incorporate the necessary tools in one of the sessions this week.
-The abstract should include what data can be found on the website and what potential research quesions you have in mind.
-
-Deadline: Today midnight!
 
 # Wrap Up
 
