@@ -209,7 +209,7 @@ Web Scraping is not a shady or illegal activity, **but** not all web scraping is
     - personal data processing is legitimate when "necessary for the performance of a task carried out in the public interest" (Art. 6 [GDPR](https://gdpr-info.eu/art-6-gdpr/))
 - Collecting **copyrighted** data
   - Complicated legal situation
-  - Public facing content is probably okay ([9th circuit ruling](https://www.vice.com/en/article/9kek83/linkedin-data-scraping-lawsuit-shot-down))
+  - Public facing content is probably okay ([9th circuit ruling](https://www.vice.com/en/article/9kek83/linkedin-data-scraping-lawsuit-shot-down), [DAS Article 40](https://www.eu-digital-services-act.com/Digital_Services_Act_Article_40.html))
   - You will probably get in trouble if you distribute the material
   - "there have been no lawsuits in [...] major western democratic countries stemming from a researcher scraping publicly accessible data from a website for personal or academic use." [@luscombewebscraping2022]
 - Honouring Terms of Service and robots.txt
