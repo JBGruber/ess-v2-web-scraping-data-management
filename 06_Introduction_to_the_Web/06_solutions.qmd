@@ -1,0 +1,62 @@
+## Exercises 3
+
+1. Practice finding the right selector with the CSS Diner game: <https://flukeout.github.io/>
+2. Consider the toy HTML example below. Which selectors do you need to put into `html_elements()` (which extracts all elements matching the selector) to extract the information
+
+
+```{r}
+#| eval: false
+library(rvest)
+webpage <- "<html>
+<body>
+  <h1>Computational Research in the Post-API Age</h1>
+  <div class='author'>Deen Freelon</div>
+  <div>Keywords:
+    <ul>
+      <li>API</li>
+      <li>computational</li>
+      <li>Facebook</li>
+    </ul>
+  </div>
+  <div class='text'>
+    <p>Three pieces of advice on whether and how to scrape from Dan Freelon</p>
+  </div>
+  
+  <ol class='advice'>
+    <li id='one'> use authorized methods whenever possible </li>
+    <li id='two'> do not confuse terms of service compliance with data protection </li>
+    <li id='three'> understand the risks of violating terms of service </li>
+  </ol>
+
+</body>
+</html>" |> 
+  read_html()
+```
+
+```{r}
+#| eval: false
+# the headline
+headline <- html_elements(webpage, "h1")
+headline
+# the author
+author <- html_elements(webpage, ".author")
+author
+# the ordered list
+ordered_list <- html_elements(webpage, "ol")
+ordered_list
+# all bullet points
+bullet_points <- html_elements(webpage, "li")
+bullet_points
+# bullet points in unordered list
+bullet_points_unordered <- html_elements(webpage, "ul li")
+bullet_points_unordered
+# elements in ordered list
+bullet_points_ordered <- html_elements(webpage, "ol *")
+bullet_points_ordered
+# third bullet point in ordered list
+bullet_point_three_ordered <- html_elements(webpage, "#three")
+bullet_point_three_ordered
+# alternativ
+bullet_point_three_ordered <- html_elements(webpage, "ol li:nth-child(3)")
+bullet_point_three_ordered
+```

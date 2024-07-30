@@ -663,7 +663,7 @@ To keep track of the relations we speak of ancestors, descendants, parents, chil
 ## Exercises 3
 
 1. Practice finding the right selector with the CSS Diner game: <https://flukeout.github.io/>
-6. Consider the toy HTML example below. Which selectors do you need to put into `html_elements()` (which extracts all elements matching the selector) to extract the information
+2. Consider the toy HTML example below. Which selectors do you need to put into `html_elements()` (which extracts all elements matching the selector) to extract the information
 
 
 ```{r}
