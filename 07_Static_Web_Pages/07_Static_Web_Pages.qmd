@@ -16,6 +16,7 @@ format:
     embed-resources: true
 bibliography: ../references.bib
 execute:
+  eval: true
   cache: false
   echo: true
 engine: knitr
@@ -225,36 +226,266 @@ html <- "<p>This is some text
 2. How could you convert the `links` objects so that it contains actual URLs?
 3. How could you add the links we extracted above to the `pm_table` to keep everything together?
 
-# Example: Getting content from embedded json
+# Example: Amazon product reviews
+## Goal
 
+:::: {.columns}
+::: {.column width="50%"}
+1. Collect all reviews from a given Amazon page
+2. Identify and extract relevant variables for each review
+:::
+::: {.column width="50%" }
+[![](media/amazon.png)](https://www.amazon.co.uk/Discovering-Statistics-Using-Andy-Field/dp/1446200469/){target="_blank"}
+:::
+::::
+
+## Scout
+
+After clicking on reviews, then "See more reviews", these are the links to the first three pages:
+
+```
+https://www.amazon.co.uk/Discovering-Statistics-Using-Andy-Field/product-reviews/1446200469/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews
+https://www.amazon.co.uk/Discovering-Statistics-Using-Andy-Field/product-reviews/1446200469/ref=cm_cr_arp_d_paging_btm_next_2?ie=UTF8&reviewerType=all_reviews&pageNumber=2
+https://www.amazon.co.uk/Discovering-Statistics-Using-Andy-Field/product-reviews/1446200469/ref=cm_cr_arp_d_paging_btm_next_2?ie=UTF8&reviewerType=all_reviews&pageNumber=3
+```
+
+## URLs explained
+
+- Uniform Resource Locator (URL) is a key mechanisms used to identify resources on a website for retrieval
+
+![](https://media.geeksforgeeks.org/wp-content/uploads/20210625160610/urldiag.PNG)
+
+## Getting all URLs to product reviews
+
+- We can spot two things:
+  - there are 185 reviews for this product
+  - there are 10 reviews per page
+- Which means: there should be 19 pages
+- However: Amazon limits results to 10 pages per query
+- To get more results, you could filter by stars, change sorting, etc.
 
 ```{r}
-html <- read_html("https://news.sky.com/story/crowdstrike-company-that-caused-global-techno-meltdown-offers-partners-10-vouchers-to-say-sorry-and-they-dont-work-13184488")
+pages <- 1:10
+links <- paste0(
+  "https://www.amazon.co.uk/Discovering-Statistics-Using-Andy-Field/product-reviews/1446200469/ref=cm_cr_arp_d_paging_btm_next_", 
+  pages, "?ie=UTF8&reviewerType=all_reviews&pageNumber=", 
+  pages,
+  "&sortBy=recent"
+)
+links
+```
 
-data <- html %>%
-  rvest::html_element("[type=\"application/ld+json\"]") %>%
-  rvest::html_text() %>%
-  jsonlite::fromJSON()
+## Collecting the reviews from 1 page
 
-datetime <- data$datePublished %>%
-  lubridate::as_datetime()
+:::: {.columns}
+::: {.column width="50%"}
+```{r}
+# make sure to read the HTML in only once
+html <- read_html(links[1])
 
-# headline
-headline <- data$headline
+# we select review elements first
+reviews <- html |> 
+  # this is a trick I had to google, ^= means starts with
+  html_elements("[id^=customer_review-]")
 
-# author
-author <- data$author$name
+# then extract the information from these reviews
+rating <- reviews |> 
+  html_element(".review-rating") |> 
+  html_text2()
 
-text <- html %>%
-  rvest::html_elements(".sdc-article-body p") %>%
-  rvest::html_text2() %>%
-  paste(collapse = "\n")
+title <- reviews |> 
+  html_elements(".a-letter-space+span") |> 
+  html_text2()
+
+date <- reviews |> 
+  html_elements(".review-date") |> 
+  html_text2()
+
+text <- reviews |> 
+  html_elements(".review-text-content") |> 
+  html_text2()
+
+tibble(date, rating, title, text)
+```
+:::
+::: {.column width="50%" }
+![](media/amazon-review.png)
+:::
+::::
+
+## X people found this helpful: incomplete cases
+
+```{r}
+helpful <- reviews |> 
+  html_elements("[data-hook=\"helpful-vote-statement\"]") |> 
+  html_text2()
+helpful
+```
+
+```{r}
+#| error: true
+tibble(date, rating, helpful, title, text)
+```
+
+## Iterate over cases, rather than variable values
+
+What we did before extracts one specific value from each case.
+But we have no mechanism to deal with missing values! To solve that, we need to iterate over reviews rather than extracting title, text, date and rating from all elements at once.
+
+```{r}
+parse_review <- function(r) {
+  rating <- r |> 
+    html_element(".review-rating") |> 
+    html_text2()
+  
+  title <- r |> 
+    html_elements(".a-letter-space+span") |> 
+    html_text2()
+  
+  date <- r |> 
+    html_elements(".review-date") |> 
+    html_text2()
+  
+  text <- r |> 
+    html_elements(".review-text-content") |> 
+    html_text2()
+  
+  helpful <- r |> 
+    html_elements("[data-hook=\"helpful-vote-statement\"]") |> 
+    html_text2()
+  
+  if (length(helpful) == 0) {
+    helpful <- NA_character_
+  }
+  
+  tibble(date, rating, helpful, title, text)
+}
+
+map(reviews, parse_review) |> 
+  bind_rows()
+```
+
+## Iterate over pages to collect all reviews
+
+```{r}
+get_reviews_from_page <- function(link) {
+  html <- read_html(link)
+  
+  reviews <- html |> 
+    html_elements("[id^=customer_review-]")
+  
+  map(reviews, parse_review) |> 
+    bind_rows()
+}
+
+all_reviews <- map(links, get_reviews_from_page) |> 
+  bind_rows()
+glimpse(all_reviews)
 ```
 
 
 ## Exercises 3
 
+We might be interested in whether a purchase was verified or not
+
+1. Extract that information from the first review page
+2. Add the variable verified to the `parse_review` function
+3. Create `all_reviews` again, but with the verified variable this time
+
+# Example: Getting content from embedded json
+## Goal
+
+:::: {.columns}
+::: {.column width="50%"}
+1. Collect news articles from news.sky.com
+2. Get the text of an article, the headline, date, and author
+:::
+::: {.column width="50%" }
+[![](media/sky.png)](https://www.amazon.co.uk/Discovering-Statistics-Using-Andy-Field/dp/1446200469/){target="_blank"}
+:::
+::::
+
+## Scout
+
+:::: {.columns}
+::: {.column width="50%"}
+Let's look for the date information in the page source
+:::
+::: {.column width="50%" }
+![](media/sky-date.png)
+:::
+::::
+
+## A Wild JSON string Appears!
+
+- JavaScript Object Notation (json) is a way of storing complicated nested data in plain text (see session 3)
+- data is put into a character string that indicates object types and relation of objects
+- R knows how to read json strings/files and can easily process them
+
+```{r}
+library(jsonlite)
+json_string <- list(x = 1:10, y = list(z = 1:10, a = LETTERS[1:10])) |> 
+  toJSON()
+json_string
+```
+
+```{r}
+fromJSON(json_string)
+```
+
+- essentially we seem to get pre-packaged data here
+
+## Obtain the JSON string
+
+```{r}
+# 1. Request & collect raw html
+html <- read_html("https://news.sky.com/story/crowdstrike-company-that-caused-global-techno-meltdown-offers-partners-10-vouchers-to-say-sorry-and-they-dont-work-13184488")
+
+# 2. Parse
+json_string <- html |> 
+  rvest::html_element("[type=\"application/ld+json\"]") |>
+  rvest::html_text() 
+
+# 3. wrangling (part 1)
+data <- jsonlite::fromJSON(json_string)
+```
+
+## Wrangling part 2
+
+From here it is really straightforward to extract (most of) the relevant information:
+
+```{r}
+# datetime
+datetime <- pluck(data, "datePublished") |>
+  lubridate::as_datetime()
+
+# headline
+headline <- pluck(data, "headline")
+
+# author
+author <- pluck(data, "name")
+```
+
+The only thing missing from this data is the article itself...
+
+## Getting the article
+
+```{r}
+text <- html |>
+  rvest::html_elements(".sdc-article-body p") |>
+  rvest::html_text2() |>
+  paste(collapse = "\n")
+```
+
+```{r}
+sky_article <- tibble(datetime, author, headline, text)
+glimpse(sky_article)
+```
+
+## Exercises 4
+
 1. Get the author, publication datetime, headline and text from this site: <https://www.cnet.com/tech/services-and-software/facebook-hopes-to-normalize-idea-of-data-scraping-leaks-says-leaked-internal-memo/> (hint: it works in a very similar way, but you have to apply one extra data wrangling step)
+
 
 # Example: zeit.de
 ## Special Requests: Behind Paywall
@@ -272,8 +503,8 @@ html |>
 :thinking: Wait, that's only the first two paragraphs!
 :::
 
-:::{.fragment}
-:bulb: Websites use cookies to remember users (including logged in ones)
+::: {.fragment .callout-tip}
+Websites use cookies to remember users (including logged in ones)
 :::
 
 ## What are browser cookies
@@ -297,28 +528,44 @@ cookies.txt”](https://chrome.google.com/webstore/detail/get-cookiestxt-locally
 ## Special Requests: ~~Behind Paywall~~ Cookies!
 
 ```{r}
-#| eval: false
+#| eval: true
 library(cookiemonster)
 add_cookies("cookies.txt")
 ```
 
 ```{r}
-#| eval: false
+#| eval: true
+library(httr2)
 html <- request("https://www.zeit.de/mobilitaet/2024-04/deutschlandticket-klimaschutz-oeffentliche-verkehrsmittel-autos-verkehrswende") |> # start a request
   req_options(cookie = get_cookies("zeit.de", as = "string")) |> # add cookies to be sent with it
   req_perform() |> 
   resp_body_html() # extract html from response
 
-html |> 
+text <- html |> 
   html_elements(".article-body p") |> 
   html_text2()
+length(text)
 ```
 
 
 # Example: South African Parliament (a special case)
+## Goal
+
+:::: {.columns}
+::: {.column width="50%"}
+1. Collect information about any financial interest of South Africa's Members of Parliament 
+:::
+::: {.column width="50%" }
+[![](media/za.png)](https://www.parliament.gov.za/register-members-Interests){target="_blank"}
+:::
+::::
+
+## Collect links to PDF
+
 
 ```{r}
 library(httr2)
+# I use the internet archive here as the real website is incredibly slow
 html <- request("https://web.archive.org/web/20240519142346/https://www.parliament.gov.za/register-members-Interests") |> 
   req_timeout(100) |> 
   req_perform() |> 
@@ -332,26 +579,26 @@ years <- html |>
   html_elements(".parly-h2+ul a") |> 
   html_text()
 
-dir.create("data/za", showWarnings = FALSE)
 interest_pdfs <- tibble(
   link = links, year = years
 ) |> 
   mutate(file_name = paste0("data/za/", year, ".pdf"))
+interest_pdfs
+```
 
+## Download files for processing
+
+```{r}
+dir.create("data/za", showWarnings = FALSE)
 if (!file.exists("data/za/2018.pdf")) {
+  # multi_download is a neat little function that parallesises file download
   curl::multi_download(
     urls = interest_pdfs$link, 
     destfiles = interest_pdfs$file_name
   )
 }
-
 ```
 
-
-
-## What do we want
-
-- REGISTER OF MEMBERS' INTERESTS
 
 ## Scraping data from PDFs?
 
@@ -376,8 +623,8 @@ if (!file.exists("data/za/2018.pdf")) {
 
 ```{r}
 library(pdftools)
-comptext <- pdf_data("data/za/2018.pdf", font_info = TRUE)
-comptext[[2]]
+interests_pdf <- pdf_data("data/za/2018.pdf", font_info = TRUE)
+glimpse(interests_pdf[[2]])
 ```
 
 We see here that:
@@ -387,31 +634,36 @@ We see here that:
 - it contains the font_size and font_name
 - the position of each word on tha page is given with x and y coordinates
 
+## Let's investigate the PDF a little
 
-:::{.fragment}
+
 Let's investigate a few words we saw above:
 
 ```{r}
 # a politician name
-comptext[[2]] |> 
+interests_pdf[[2]] |> 
   filter(str_detect(text, "Abrahams,"))
 
 # an item header
-comptext[[2]] |> 
+interests_pdf[[2]] |> 
   filter(str_detect(text, "1"))
 
 # a disclose
-comptext[[2]] |> 
+interests_pdf[[2]] |> 
   filter(str_detect(text, "disclose"))
 
 # a word inside table
-comptext[[2]] |> 
+interests_pdf[[2]] |> 
   filter(str_detect(text, "Pringle"))
 
 # a table header
-comptext[[2]] |> 
+interests_pdf[[2]] |> 
   filter(str_detect(text, "Description"))
 ```
+
+
+:::{.fragment}
+Findings:
 
 - It looks like we can say relatively easily where a new politician entry starts based on the font
 - The item header has the same font name, but a different size
@@ -419,23 +671,150 @@ comptext[[2]] |>
 - The table colnames are similar to item headers, but start at a different x location
 :::
 
+## Test extract info from one page
 
 ```{r}
-#| eval: false
-p1 <- comptext[[2]]
+p1 <- interests_pdf[[2]]
+```
+
+```{r}
+# add whether politician name
 p1 |> 
-  filter(font_name == "Arial-BoldMT", round(font_size, 1) == 7.5,
-         x < 56) |> View()
+  mutate(is_name = font_name == "Arial-BoldMT" & 
+           round(font_size, 3) == 8.775) |> 
+  # add whether header
+  mutate(is_header = font_name == "Arial-BoldMT" & 
+           round(font_size, 1) == 7.5)
+```
+
+## Wrangle into shape
+
+```{r}
+p1_df <- p1 |> 
+  # one line in the PDF is all on the same y position
+  group_by(y) |> 
+  # so we can summarise, ie. make one row out of one line
+  summarise(
+    # we retain only the first value from font_name, font_size and x
+    # since they are all the same anyway
+    font_name = head(font_name, 1),
+    font_size = head(font_size, 1),
+    x = head(x, 1),
+    # we use paste with collapse to get several character values into
+    # one string per line
+    text = paste(text, collapse = " "), 
+    # dropping groups as we don't need them
+    .groups = "drop"
+  ) |> 
+  # we check whether a line is a name
+  mutate(is_name = font_name == "Arial-BoldMT" & 
+           round(font_size, 3) == 8.775) |> 
+  # and add a unique ID per person
+  mutate(id = cumsum(is_name)) |> 
+  # now we do the same per disclosure item
+  mutate(is_header = font_name == "Arial-BoldMT" & 
+           round(font_size, 1) == 7.5 &
+           x < 50) |> 
+  mutate(item_id = cumsum(is_header))
+```
+
+## Wrangle into shape
+
+```{r}
+p1_df_tidy <- p1_df |> 
+  # we group by person
+  group_by(id) |> 
+  # and add a new variable with their name
+  mutate(
+    name = text[is_name],
+  ) |> 
+  ungroup() |> 
+  # now we can remove the rows that contain the name in the text
+  filter(!is_name) |> 
+  # we do the same per item
+  group_by(item_id) |> 
+  mutate(
+    item = text[is_header],
+    content = paste(text[!is_header], collapse = "\n")
+  ) |> 
+  # this produces a lot of duplicates, which we can get rid of with distinct
+  distinct(name, item, content)
+glimpse(p1_df_tidy)
+```
+
+## Apply to whole PDF
+
+First, we have to add a page number to each site:
+
+```{r}
+for (p in seq_along(interests_pdf)) {
+  interests_pdf[[p]]$page <- p
+}
+```
+
+## Apply to whole PDF
+
+I'm sorry for this long code :sweat_smile:
+
+```{r}
+interests_df <- bind_rows(interests_pdf) |> 
+  # one line in the PDF is all on the same y position
+  group_by(page, y) |> 
+  # so we can summarise, ie. make one row out of one line
+  summarise(
+    # we retain only the first value from font_name, font_size and x
+    # since they are all the same anyway
+    font_name = head(font_name, 1),
+    font_size = head(font_size, 1),
+    x = head(x, 1),
+    # we use paste with collapse to get several character values into
+    # one string per line
+    text = paste(text, collapse = " "), 
+    # dropping groups as we don't need them
+    .groups = "drop"
+  ) |> 
+  # we check whether a line is a name
+  mutate(is_name = font_name == "Arial-BoldMT" & 
+           round(font_size, 3) == 8.775) |> 
+  # and add a unique ID per person
+  mutate(id = cumsum(is_name)) |> 
+  # everything before the first name can be removed
+  filter(id != 0) |> 
+  # now we do the same per disclosure item
+  mutate(is_header = font_name == "Arial-BoldMT" & 
+           round(font_size, 1) == 7.5 &
+           x < 50) |> 
+  mutate(item_id = cumsum(is_header))  |> 
+  # we group by person
+  group_by(id) |> 
+  # and add a new variable with their name
+  mutate(
+    name = text[is_name],
+  ) |> 
+  ungroup() |> 
+  # now we can remove the rows that contain the name in the text
+  filter(!is_name) |> 
+  # we do the same per item
+  group_by(item_id) |> 
+  mutate(
+    item = text[is_header],
+    content = paste(text[!is_header], collapse = "\n")
+  ) |> 
+  # this produces a lot of duplicates, which we can get rid of with distinct
+  ungroup() |> 
+  distinct(id, name, item, content)
 ```
 
 
-## Exercises 4
+
+## Exercises 5
 
 1. In the folder /data (relative to this document) there is a PDF with some text. Read it into R
-2. The PDF has two columns, bring the text in the right order as a human would read it
-3. Let's assume you wanted to have this text in a table with one column indicating the section and one having the text of the section
-4. Now let's assume you wanted to parse this on the paragraph level instead
-
+2. The PDF has two columns, parse the left column of the first page into one object and the right into another
+3. Now combine them in the correct order
+bring the text in the right order as a human would read it
+4. Let's assume you wanted to have this text in a table with one column indicating the section and one having the text of the section
+5. Now let's assume you wanted to parse this on the paragraph level instead (hint: remember `str_split_1`)
 
 
 # Optional Homework
@@ -459,4 +838,28 @@ Save some information about the session for reproducibility.
 #| code-fold: true
 #| code-summary: "Show Session Info"
 sessionInfo()
+```
+
+<!-- This is just some extra CSS code to make presentation look pretty -->
+```{css}
+#| echo: false
+.table-striped {
+  > tbody > tr:nth-of-type(odd) > * {
+    background-color: #fff9ce;
+  }
+}
+.table-hover {
+  > tbody > tr:hover > * {
+    background-color: #ffe99e; /* Adjust this color as needed */
+  }
+}
+.reveal section img { 
+    background: rgba(255, 255, 255, 0.12); 
+    border: 4px solid #eeeeee;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.15) 
+}
+
+.reveal code {
+  max-height: 100% !important;
+}
 ```

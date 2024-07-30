@@ -218,7 +218,7 @@ dbWriteTable(db, "airlines", airlines, overwrite = TRUE)
 
 ::: {.column width="60%"}
 ```sh
-docker exec -it -u postgres postgres_db psql
+docker exec -it -u postgres postgres_db psql -d dbintro
 ```
 
 Inside the Docker container (that is the name of a server running via docker), you can list tables with:
