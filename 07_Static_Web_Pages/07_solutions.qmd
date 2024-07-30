@@ -1,0 +1,213 @@
+---
+title: "solutions session 7"
+format: html
+---
+
+## Exercises 1
+
+1. Get the table with 2023 opinion polling for the next United Kingdom general election from <https://en.wikipedia.org/w/index.php?title=Opinion_polling_for_the_2024_United_Kingdom_general_election&oldid=1232596394>
+
+```{r}
+library(tidyverse)
+library(rvest)
+# 1. Request & collect raw html
+html <- read_html("https://en.wikipedia.org/w/index.php?title=Opinion_polling_for_the_2024_United_Kingdom_general_election&oldid=1232596394")
+
+# 2. Parse
+opinion_table <- html |>
+  html_elements(".wikitable") |> 
+  html_table() |>                
+  pluck(2)                    
+```
+
+
+2. Wrangle and plot the data opinion polls
+
+```{r}
+# 3. Wrangle
+opinion_tidy <- opinion_table |> 
+  pivot_longer(Con:Others, names_to = "party", values_to = "result") |> 
+  mutate(result_pct = as.numeric(str_extract(result, "\\d+(?=%)")),
+         date_clean = str_extract(Datesconducted, "\\d{1,2} [A-z]{3}"),
+         date = lubridate::dmy(paste(date_clean, 2024))) |> 
+  filter(!is.na(result_pct),
+         # some dates are parsed wrong and are in the future
+         date < "2024-07-03")
+
+# Plot!
+opinion_tidy |> 
+  ggplot(aes(x = date, y = result_pct, colour = party)) +
+  geom_line()
+```
+
+## Exercises 2
+
+1. For extracting text, `rvest` has two functions: `html_text` and `html_text2`. Explain the difference. You can test your explanation with the example html below.
+
+```{r}
+html <- "<p>This is some text
+         some more text</p><p>A new paragraph!</p>
+         <p>Quick Question, is web scraping:
+
+         a) fun
+         b) tedious
+         c) I'm not sure yet!</p>" |> 
+  read_html()
+```
+
+- You should almost always use `html_text2`, as the help page says (`?html_text2`)
+- `html_text2`, put briefly, extracts text as the browser would display it
+- `html_text`, retains the original line breaks and extra space in the raw html content
+- You can easily test that with
+
+```{r}
+html_text(html)
+html_text2(html)
+```
+
+The superfluous line breaks and extra space from the html code is not displayed
+
+2. How could you convert the `links` objects so that it contains actual URLs?
+
+The links are all relative to https://en.wikipedia.org. So we need to add that part to the links:
+
+```{r}
+# using base R's paste
+paste0("https://en.wikipedia.org", links)
+# Or str_c from stringr
+str_c("https://en.wikipedia.org", links)
+```
+
+3. How could you add the links we extracted above to the `pm_table` to keep everything together?
+
+- We can use `left_join` for that. First, we need to put `links` int a table. But we already did to construct `links_df`
+- The primary key in pm_table would be `Prime ministerOffice(Lifespan)` and the foreign key is just `name`
+- This is basically all I wanted to know here, but if you want to go through with it, we need to clean up  `Prime ministerOffice(Lifespan)` a bit first
+
+```{r}
+# 1. Request & collect raw html
+html <- read_html("https://en.wikipedia.org/w/index.php?title=List_of_prime_ministers_of_the_United_Kingdom&oldid=1166167337") # I'm using an older version of the site since some just changed it
+
+# 2. Parse
+pm_table <- html |> 
+  html_element(".wikitable:contains('List of prime ministers')") |>
+  html_table() |> 
+  as_tibble(.name_repair = "unique") |> 
+  filter(!duplicated(`Prime ministerOffice(Lifespan)`))
+
+# 3. No wrangling necessary
+pm_table
+
+pm_links <- tibble(name = title, link = links)
+pm_table_clean <- pm_table |> 
+  mutate(pm = str_extract(`Prime ministerOffice(Lifespan)`, ".+\\["),
+         pm = str_remove(pm, "\\["))
+
+pm_table_clean |> 
+  left_join(pm_links, by = c("pm"= "name"))
+```
+
+## Exercises 3
+
+We might be interested in whether a purchase was verified or not
+
+1. Extract that information from the first review page
+
+We have already extracted the reviews from the first page, so we can work with them directly:
+
+```{r}
+verified <- reviews |> 
+  html_elements("[data-hook=\"avp-badge\"]") |> 
+  html_text2()
+```
+
+2. Add the variable verified to the `parse_review` function
+
+```{r}
+parse_review <- function(r) {
+  rating <- r |> 
+    html_element(".review-rating") |> 
+    html_text2()
+  
+  title <- r |> 
+    html_elements(".a-letter-space+span") |> 
+    html_text2()
+  
+  date <- r |> 
+    html_elements(".review-date") |> 
+    html_text2()
+  
+  text <- r |> 
+    html_elements(".review-text-content") |> 
+    html_text2()
+  
+  helpful <- r |> 
+    html_elements("[data-hook=\"helpful-vote-statement\"]") |> 
+    html_text2()
+  
+  if (length(helpful) == 0) {
+    helpful <- NA_character_
+  }
+  
+  verified <- reviews |> 
+    html_elements("[data-hook=\"avp-badge\"]") |> 
+    html_text2()
+  
+  tibble(date, rating, helpful, verified, title, text)
+}
+```
+
+
+3. Create `all_reviews` again, but with the verified variable this time
+
+We do not actually have to change anything about the last part. As the `parse_review` is called inside `get_reviews_from_page`, it automatically uses the right code for us
+
+```{r}
+get_reviews_from_page <- function(link) {
+  html <- read_html(link)
+  
+  reviews <- html |> 
+    html_elements("[id^=customer_review-]")
+  
+  map(reviews, parse_review) |> 
+    bind_rows()
+}
+
+all_reviews <- map(links, get_reviews_from_page) |> 
+  bind_rows()
+glimpse(all_reviews)
+```
+
+## Exercises 4
+
+1. Get the author, publication datetime, headline and text from this site: <https://www.cnet.com/tech/services-and-software/facebook-hopes-to-normalize-idea-of-data-scraping-leaks-says-leaked-internal-memo/> (hint: it works in a very similar way, but you have to apply one extra data wrangling step)
+
+```{r}
+# 1. Request & collect raw html
+html <- read_html("https://www.cnet.com/tech/services-and-software/facebook-hopes-to-normalize-idea-of-data-scraping-leaks-says-leaked-internal-memo/")
+
+# 2. Parse
+json_string <- html |> 
+  rvest::html_element("[type=\"application/ld+json\"]") |>
+  rvest::html_text() 
+
+# 3. wrangling (part 1)
+data <- jsonlite::fromJSON(json_string, simplifyVector = FALSE)
+
+data_article <- pluck(data, "@graph", 1)
+
+headline <- data_article$headline
+author <- data_article[["author"]][[1]][["name"]]
+date <- data_article$datePublished |> 
+  lubridate::as_datetime()
+
+text <- html %>%
+  rvest::html_elements(".c-pageArticle_content p") %>%
+  rvest::html_text2() %>%
+  paste(collapse = "\n")
+
+article_df <- tibble(date, author, headline, text)
+```
+
+
+
