@@ -1,23 +1,57 @@
 ---
-title: "Introduction to Web Scraping and Data Management for Social Scientists"
-subtitle: "Session 8: Application Programming Interface (APIs)"
+title: "Session 8: Application Programming Interface (APIs)"
+subtitle: "Introduction to Web Scraping and Data Management for Social Scientists"
 author: "Johannes B. Gruber"
 date: 2024-07-31
+from: markdown+emoji
 format:
   revealjs:
     smaller: true
+    width: 1600
+    height: 900
     scrollable: true
     code-line-numbers: true
     slide-number: c/t
-    logo: https://essexsummerschool.com/wp-content/uploads/2016/03/essex_logo-mobile.svg
-    self-contained: true
+    logo: ../ess_logo.png
+    embed-resources: true
+bibliography: ../references.bib
 execute:
-  cache: true
+  eval: true
+  cache: false
   echo: true
-highlight-style: pygments
+engine: knitr
+highlight-style: nord
 ---
 
 # Introduction
+## This Course
+
+<center>
+```{r setup}
+#| echo: false
+#| message: false
+library(tinytable)
+library(tidyverse)
+library(httr2)
+tibble::tribble(
+  ~Day, ~Session,
+  1,  "Introduction",
+  2,  "Data Structures and Wrangling",
+  3,  "Working with Files",
+  4,  "Linking and joining data & SQL",
+  5,  "Scaling, Reporting and Database Software",
+  6,  "Introduction to the Web",
+  7,  "Static Web Pages",
+  8,  "Application Programming Interface (APIs) ",
+  9,  "Interactive Web Pages",
+  10, "Building a Reproducible Research Project",
+) |> 
+  tt() |> 
+  style_tt() |> 
+  style_tt(i = 8, background = "#FDE000")
+```
+</center>
+
 ## The Plan for Today
 :::: {.columns}
 
@@ -28,7 +62,7 @@ We will:
 - Learn what an API is and what parts it consists of
 - Learn about `httr2`, a modern intuitive package to communicate with APIs
 - Discuss some examples:
-  - a simple first API: The Guardian API
+  - A simple first API: The Guardian API
   - UK Parliament API
   - Semantic Scholar API
 - Go into a bit more detail on requesting raw data
@@ -55,8 +89,8 @@ We will:
 - Several important types (SOAP, GraphQL, etc.), but we will focus on REST (Representational state transfer) APIs
 - Commonly used to distribute data or do many other things
 - A few prominent examples:
-  - the Twitter and Facebook APIs (both effectivly defunct)
-  - the ChatGPT API, which is used to buld many additional services
+  - the Twitter and Facebook APIs (both effectively defunct)
+  - the ChatGPT API, which is used to build many additional services
   - news APIs like The Guardian and NYT
   - financial APIs
   - translation APIs (Google, Bing and DeepL)
@@ -67,7 +101,7 @@ API calls usually combine several elements:
 
 - a **base URL** of the service (e.g., `https://api.openai.com/`)
 - an **endpoint** for a specific service, usually accessed through a sub-directory (e.g., `/v1/completions`)
-- an API **methods**: `GET`, `POST`, `PUT`, `DELETE`, etc. (only `GET` and sometimes `POST` are important for us )
+- an API **method**: `GET`, `POST`, `PUT`, `DELETE`, etc. (only `GET` and sometimes `POST` are important for us )
 - **headers** containing some settings, e.g., what format you want to receive the data in (JSON, XML, HTML etc.), and communicating who you are through user-agent, cookies, device and software information that is usually used for debugging
 - **query parameters**, i.e., your search term, filters, what fields/columns you want to access, how many results you want to receive, how results are ordered etc (`?q=parliament%20AND%20debate`)
 - a **body** if your request contains some more complicated instructions (not for `GET` requests)
@@ -97,21 +131,22 @@ APIs respond to a call. The response usually also contains several elements:
 # Example: The Guardian API
 ## Background
 
-- The newspaper `The Guardian` offers all its articles through and open API for free
+- The newspaper `The Guardian` offers all its articles through an open API for free :nerd_face:
 - To access the API, you first need to obtain an API key by filling out a small form [here](https://bonobo.capi.gutools.co.uk/register/developer)
 - The API key should arrive within seconds per mail
-- This is unfortunaltly very rare in the world of news media :(
+- This is unfortunately very rare in the world of news media :frowning_face:
 - To figure out how to use the API, we can use its [documentation](https://open-platform.theguardian.com/documentation/)
 
-Your task: get a key and use `usethis::edit_r_environ(scope = "project")` to open your environ file.
+Your task: get a key and use `usethis::edit_r_environ(scope = "project")` to open your .Renviron file.
 Save the API key as the variable `GUARDIAN_KEY`.
 
 ## Building Requests
 
-Let's build or first `httr2` request!
+Let's build our first `httr2` request!
 
 ```{r}
 #| style: "font-size: 140%;"
+#| output: false
 library(httr2)
 library(tidyverse, warn.conflicts = FALSE)
 req <- request("https://content.guardianapis.com") |>  # start the request with the base URL
@@ -138,6 +173,7 @@ But this doesn't yet do anything until you also perform it.
 ## Performing the request
 
 ```{r}
+#| output: false
 resp <- req_perform(req)
 resp
 ```
@@ -163,8 +199,10 @@ If we're happy with the status of the response, we can start to look at the body
 
 ```{r}
 returned_body <- resp_body_json(resp)
-glimpse(returned_body)
+lobstr::tree(returned_body, max_length = 25)
 ```
+
+## Parsing the response: a first look
 
 We already see some useful information about the the result.
 We could extract that information either with `pluck` from the tidyverse or using square brackets:
@@ -204,7 +242,7 @@ This is probably the main reason why people dislike working with APIs in `R`, as
 ## Parsing the response: building a data wrangling function
 
 Let's build a function to select just some important information.
-We start by writing a few lines of code to parse the first artilce:
+We start by writing a few lines of code to parse the first article:
 
 ```{r}
 res <- pluck(search_res, 1)
@@ -219,6 +257,8 @@ headline <- res$webTitle
 headline
 ```
 
+## Parsing the response: building a data wrangling function
+
 So far so good, but where is the text?
 It seems it is stored in these "blocks" -> "body" elements.
 Let's have a look:
@@ -231,11 +271,12 @@ pluck(res, "blocks", "body")
 ## Parsing the response: building a data wrangling function
 
 It seems the API returns articles as HTML strings.
-Luckily, we know how to extract text from that :)
+Luckily, we know how to extract text from that :sunglasses:
 
 ```{r}
 library(rvest)
-text <- read_html(pluck(res, "blocks", "body", 1, "bodyHtml")) |>
+text <- pluck(res, "blocks", "body", 1, "bodyHtml") |> 
+  read_html() |> 
   html_text2()
 text
 ```
@@ -246,12 +287,17 @@ Let's put this all together:
 
 ```{r}
 parse_response <- function(res) {
+  
+  text <- pluck(res, "blocks", "body", 1, "bodyHtml") |> 
+    read_html() |> 
+    html_text2()
+  
   tibble(
     id = res$id,
     type = res$type,
     time = lubridate::ymd_hms(res$webPublicationDate),
     headline = res$webTitle,
-    text = read_html(pluck(res, "blocks", "body", 1, "bodyHtml")) |> html_text2()
+    text = text
   )
 }
 parse_response(res)
@@ -266,6 +312,13 @@ map(search_res, parse_response) |>
 
 ## Exercises 1
 
+First, review the material and make sure you have a broad understanding how to:
+
+- build a request to an API
+- perform the request
+- handle the response
+
+
 1. `httr2` has several more functions to customize how a request is performed. What do these functions do?
 
 - `req_throttle`:
@@ -276,9 +329,8 @@ map(search_res, parse_response) |>
 
 3. You might want to add more information to the data.frame. Adapt the function parse_response to also extract: apiUrl, lastModifiedDate, pillarId
 
-4. Request page 2 from the API
+4. Request page 2 from the API. You can search for the correct query parameter in the documentation here: <https://open-platform.theguardian.com/documentation/>
 
-5. Wrap the request and parsing function in a loop to go through the pages, use `req_throttle` to make not more than 1 request per second
 
 # Example: The UK Parliament API
 ## Background
@@ -287,7 +339,7 @@ map(search_res, parse_response) |>
 
 ::: {.column width="30%"}
 - The UK parliament offers several APIs 
-- You can get data on members, constituentcies votes etc.
+- You can get data on members, constituencies votes etc.
 - The documentation is generated from OpenAPI specifications and rendered with swagger, which is quite convenient
 :::
 
@@ -301,22 +353,30 @@ map(search_res, parse_response) |>
 
 ## Exploring the Docs
 
+:::: {.columns}
+
+::: {.column width="50%"}
 [
   ![](media/uk_parl_docs.png)
 ](https://members-api.parliament.uk/index.html)
+:::
 
+::: {.column width="50%" }
 We can look for an endpoint that interests us and even run an example right here!
 
-![](media/uk_parl_search_member.png)
+![/api/Members/Search endpoint](media/uk_parl_search_member.png)
 
 We even get a Curl call, which makes this really convenient!
+:::
+
+::::
 
 ## Note: what are `cURL` calls
 
 :::: {.columns}
 
-::: {.column width="60%"}
-- `cURL` is a library that can make HTTP requests.
+::: {.column width="50%"}
+- `cURL` is a library that can make HTTP requests
 - think of it as a general non-R-specific `httr2`
 - it is widely used for API calls from the terminal.
 - it lists the parameters of a call in a pretty readable manner:
@@ -326,10 +386,9 @@ We even get a Curl call, which makes this really convenient!
   - `--compressed` means to ask for a compressed response which is unpacked locally (saves bandwidth)
 :::
 
-::: {.column width="40%" }
+::: {.column width="50%" }
 ```{bash}
 #| eval: false
-#| style: "font-size: 60%;"
 curl 'https://www.researchgate.net/profile/Johannes-Gruber-2' \
   -H 'accept-language: en-GB,en;q=0.9' \
   -H 'cache-control: max-age=0' \
@@ -375,7 +434,8 @@ search <- request("https://members-api.parliament.uk/api/Members/Search?Name=Maj
 
 ```{r}
 pluck(search, "totalResults")
-pluck(search, "items", 1)
+pluck(search, "items", 1) |> 
+  lobstr::tree(max_length = 25)
 ```
 
 ## Wrangling the data
@@ -398,11 +458,35 @@ tibble(
 )
 ```
 
-This code is relativly busy, so let's deconstruct it a little:
+This code is relatively busy, so let's deconstruct it a little:
 
 - `tibble` wraps the results in a tibble
 - `items` is a list, to extract the first element from it, we used `pluck(search, "items", 1)`, but usually we have more than 1 result, so we need to loop over the results using a `map_*` function
 - We know what types to expect from our first request, so we choose `map_int` for integer fields, `map_chr` for character fields and `map` for lists
+
+
+## Wrangling the data
+
+As usual, we get some meta information like `totalResults` and the data in a list.
+To make the `items` more useful, we can bring them into a tabular format.
+
+```{r}
+items <- pluck(search, "items")
+tibble(
+  id                    = map_int(items, function(i) pluck(i, "value", "id")),
+  nameListAs            = map_chr(items, function(i) pluck(i, "value", "nameListAs")),
+  nameDisplayAs         = map_chr(items, function(i) pluck(i, "value", "nameDisplayAs")),
+  nameFullTitle         = map_chr(items, function(i) pluck(i, "value", "nameFullTitle")),
+  nameAddressAs         = map_chr(items, function(i) pluck(i, "value", "nameAddressAs")),
+  gender                = map_chr(items, function(i) pluck(i, "value", "gender")),
+  latestParty           = map(items, function(i) pluck(i, "value", "latestParty")),
+  latestHouseMembership = map(items, function(i) pluck(i, "value", "latestHouseMembership")),
+  test                  = map_chr(items, function(i) pluck(i, "value", "test", .default = NA))
+)
+```
+
+This code is relatively busy, so let's deconstruct it a little:
+
 - we included the test column simply to show why we use `pluck` here instead of e.g., `i[["value"]][["id"]]`: we can set a default value if nothing is found
   - many APIs are inconsistent in what they return
   - if you try to extract a field deep in a list with `[[]]`, you will get an error that the field does not exist or `NULL` (which causes an error with `tibble()`)
@@ -454,8 +538,7 @@ search_members("Blair")
 ```
 
 ```{r}
-search_members("Smith") |> 
-  filter(str_detect(nameListAs, "[ ,^]Smith[ ,$]"))
+search_members("Smith")
 ```
 
 The Smith search is a little odd since there are surely more than 20 results for this common name.
@@ -467,17 +550,52 @@ The Smith search is a little odd since there are surely more than 20 results for
 - The UK parliament APIs handles pagination through two parameters:
   - skip: The number of records to skip from the first, default is 0
   - take: The number of records to return, default is 20. Maximum is 20
-- Based on this we can adapt the function
+
+So to get the second page with the next 20 results, we need to adapt the call:
+
+
+```{r}
+resp <- request("https://members-api.parliament.uk/api/Members/Search") |>
+  req_method("GET") |>
+  req_url_query(
+    Name = "Smith",
+    take = 20,
+    skip = 20
+  ) |> 
+  req_headers(
+    accept = "text/plain",
+  ) |>
+  req_perform() |> 
+  resp_body_json()
+
+# wrangle
+items <- pluck(resp, "items")
+tibble(
+  id                    = map_int(items, function(i) safe_pluck(i, "value", "id")),
+  nameListAs            = map_chr(items, function(i) safe_pluck(i, "value", "nameListAs")),
+  nameDisplayAs         = map_chr(items, function(i) safe_pluck(i, "value", "nameDisplayAs")),
+  nameFullTitle         = map_chr(items, function(i) safe_pluck(i, "value", "nameFullTitle")),
+  nameAddressAs         = map_chr(items, function(i) safe_pluck(i, "value", "nameAddressAs")),
+  gender                = map_chr(items, function(i) safe_pluck(i, "value", "gender")),
+  latestParty           = map(items, function(i) safe_pluck(i, "value", "latestParty")),
+  latestHouseMembership = map(items, function(i) safe_pluck(i, "value", "latestHouseMembership"))
+)
+```
+
+## Wrapping the endpoint in a function: add pagination
+  
+Based on this we can adapt the function
 
 ```{r}
 search_members <- function(name) {
   
-  # request
+  # make the initial request
   resp <- request("https://members-api.parliament.uk/api/Members/Search") |>
     req_method("GET") |>
     req_url_query(
       Name = name,
-      take = 20
+      take = 20,
+      skip = 0
     ) |> 
     req_headers(
       accept = "text/plain",
@@ -496,6 +614,7 @@ search_members <- function(name) {
   
   # while loops are repeated until the condition inside is FALSE
   while (total > skip) { 
+    
     skip <- skip + 20
     page <- page + 1
     
@@ -543,7 +662,7 @@ search_members("Smith")
 
 ## Adding more parameters
 
-- The documentation lists a whole lot of other paramters.
+- The [documentation](https://members-api.parliament.uk/index.html) lists a whole lot of other parameters.
 - We can copy them into the function to employ them when calling the API.
 - We can set the defaults to `NULL`, which means they are ignored by `req_url_query` when not used
 - Documentations usually list the required parameters, for which you shouldn't set a default
@@ -568,7 +687,7 @@ search_members <- function(name = NULL,
                            policyinterestid = NULL,
                            experience = NULL) {
   
-  # request
+  # 1. request
   resp <- request("https://members-api.parliament.uk/api/Members/Search") |>
     req_method("GET") |>
     req_url_query(
@@ -596,6 +715,7 @@ search_members <- function(name = NULL,
       accept = "text/plain",
     ) |>
     req_perform() |> 
+    # 2. Parse
     resp_body_json()
   
   # checking the total and setting things up for pagination
@@ -643,6 +763,7 @@ search_members <- function(name = NULL,
         accept = "text/plain",
       ) |>
       req_perform() |> 
+      # 2. Parse
       resp_body_json()
     
     # we append the original result with the new items
@@ -680,7 +801,7 @@ We can use it here to add explanations to the parameters.
 You can easily add roxygen code to a function using the Code menu in RStudio and Insert Roxygen Skeleton:
 
 ```{r}
-#' Search for members of the UK Parliamnet
+#' Search for members of the UK Parliament
 #'
 #' @param name Members where name contains term specified
 #' @param location Members where postcode or geographical location matches the term specified
@@ -688,7 +809,7 @@ You can easily add roxygen code to a function using the Code menu in RStudio and
 #' @param partyid Members which are currently affiliated with party with party ID
 #' @param house Members where their most recent house is the house specified (1 for Commons, 2 for Lords)
 #' @param constituencyid Members which currently hold the constituency with constituency id
-#' @param namestartswith Members with surname begining with letter(s) specified
+#' @param namestartswith Members with surname beginning with letter(s) specified
 #' @param gender Members with the gender specified
 #' @param membershipstartedsince Members who started on or after the date given
 #' @param membershipended_membershipendedsince Members who left the House on or after the date given
@@ -733,11 +854,20 @@ search_members <- function(name = NULL,
 
 ## Exercises 2
 
+First, review the material and make sure you have a broad understanding how to:
+
+- read the documentation of the UK Parliament API (the documentation is specific to the API, but the Swagger format they use is very common)
+- how to translate a curl call
+- What the individual parts of the `search_members` function are doing
+
 To get more information about an MP, we can use the endpoint "/api/Members/{id}/Biography"
 
 1. Search for an MP you are interested in with the function above and use the id on the documentation website with "Try it out"
 2. Copy the Curl call and translate it into `httr2` code
 3. Wrangle the returned data into a tabular format
+
+Bonus:
+
 4. Write a function which lets you request information given an ID and which wrangles the results
 5. Two more interesting endpoints are "/api/Posts/GovernmentPosts" and "/api/Posts/OppositionPosts". What do they do and how can you request data from them
 
@@ -748,13 +878,8 @@ To get more information about an MP, we can use the endpoint "/api/Members/{id}/
 :::: {.columns}
 
 ::: {.column width="45%"}
-- General goal in the course: we want to build a database of conference attendance and link this to researchers
-- So for some conference websites we collected:
-  - Speakers
-  - (Co-)authors
-  - Paper/talk titles
-  - Panel (to see who was in the same ones)
-- To get information about the scholars, we want to use Semantic Scholar
+- Get information about scholars
+- We want to use Semantic Scholar
   - Semantic Scholar collects scientific papers and their authors
   - Semantic Scholar API supports Paper and Author Lookup
 :::
@@ -770,7 +895,7 @@ To get more information about an MP, we can use the endpoint "/api/Members/{id}/
 ## Exploring the documentation
 
 - The documentation for the API can be found here: <https://api.semanticscholar.org/api-docs/graph>
-- It is shown in the other common documentation format called ReDoc
+- It is shown in the other common documentation format calledReDoc
 - I personally prefer swagger, however, this format can be produced by the OpenAPI specification linked on the website (you can use ReDoc though if you want)
 - There is a tool in `R` which opens a small server on your computer that can display OpenAPI specifications in the swagger format
 
@@ -823,6 +948,7 @@ First we wrap this in a function and add pagination to get all results:
 ```{r}
 find_scholar <- function(name,
                          verbose = TRUE) {
+  
   # make initial request
   res <- request("https://api.semanticscholar.org/graph/v1/author/search") |>
     req_url_query(query = name) |> 
@@ -923,12 +1049,13 @@ We now get several useful columns including the field of study of a paper (which
 adam_search
 ```
 
-## Let's wrap it up in an extended function
+## Let's put it all together in an extended function
 
 ```{r}
 find_scholar <- function(name, 
                          fields = "name,papers.title,papers.title,papers.year,papers.fieldsOfStudy,papers.authors",
                          limit = 100) {
+  
   # make initial request
   res <- request("https://api.semanticscholar.org/graph/v1/author/search") %>%
     req_url_query(query = name) %>%
@@ -977,6 +1104,8 @@ find_scholar <- function(name,
 }
 ```
 
+## Let's put it all together in an extended function
+
 I separated the parsing function from this to make it easier to read.
 
 ```{r}
@@ -1005,11 +1134,17 @@ find_scholar("Ryan Bakker")
 
 ## Exercises 3
 
-1. Document the function we just created
+First, review the material. This example is pretty similar to the last one. But:
 
-2. Search for 10 scholars (note: You can use the conference data from the last session) 
+- it uses a different documentation style called ReDoc, which does not give you curl calls to copy
+- it uses a different pagination: instead of using the total number of items, we look for new ones until nothing new is returned
+- we throttle the number of requests
 
+1. Document the function we just created. This is mainly to let you think about the parameters and how you would describe their working to someone else
+2. Use the function to search for a couple of scholars of your choice. Who has the most co-authors and unique papers?
 3. Say you found an authors ID with the search function. How could you use "/author/{author_id}" and "/author/{author_id}/papers" to request more information about them?
+
+Bonus:
 
 4. Write a function that wraps "/author/{author_id}"
 
