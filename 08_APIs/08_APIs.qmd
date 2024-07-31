@@ -112,7 +112,7 @@ API calls usually combine several elements:
 APIs respond to a call. The response usually also contains several elements:
 
 - a **status code**: 200s mean success, 300s mean success with some caveat, 400+ are request errors (not found, forbidden), 500 is a server error
-- **headers** provide additional information about the response (e.g., type of data returned, size of the data, timestamp)
+- **headers** provide additional information about the response (e.g., type of data returned, size of the data, time stamp)
 - **body**: the main response containing the requested data
 - **response metadata**: more information about the response (e.g., pagination information, version numbers, remaining rate limit allowance, link to next page)
 - **error messages**: when unsuccessful, the API might include an error message on top of the status code
@@ -537,6 +537,8 @@ search_members <- function(name) {
 search_members("Blair")
 ```
 
+## Wrapping the endpoint in a function
+
 ```{r}
 search_members("Smith")
 ```
@@ -881,7 +883,7 @@ Bonus:
 - Get information about scholars
 - We want to use Semantic Scholar
   - Semantic Scholar collects scientific papers and their authors
-  - Semantic Scholar API supports Paper and Author Lookup
+  - Semantic Scholar API supports Paper and Author Look-up
 :::
 
 ::: {.column width="50%" }
