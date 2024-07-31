@@ -866,7 +866,7 @@ To get more information about an MP, we can use the endpoint "/api/Members/{id}/
 
 1. Search for an MP you are interested in with the function above and use the id on the documentation website with "Try it out"
 2. Copy the Curl call and translate it into `httr2` code
-3. Wrangle the returned data into a tabular format
+3. Wrangle the `governmentPosts` returned in the data into a tabular format
 
 Bonus:
 
