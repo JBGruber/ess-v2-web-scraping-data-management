@@ -144,7 +144,7 @@ ggplot(happy_table, aes(x = `GDP per capita`, y = `Healthy life expectancy`)) +
 
 ## Exercises 1
 
-1. Get the table with 2023 opinion polling for the next United Kingdom general election from <https://en.wikipedia.org/wiki/Opinion_polling_for_the_2024_United_Kingdom_general_election>
+1. Get the table with 2023 opinion polling for the next United Kingdom general election from <https://en.wikipedia.org/w/index.php?title=Opinion_polling_for_the_2024_United_Kingdom_general_election&oldid=1232596394>
 2. Wrangle and plot the data opinion polls
 
 # Example: UK prime ministers on Wikipedia
@@ -528,13 +528,13 @@ cookies.txt”](https://chrome.google.com/webstore/detail/get-cookiestxt-locally
 ## Special Requests: ~~Behind Paywall~~ Cookies!
 
 ```{r}
-#| eval: true
+#| eval: false
 library(cookiemonster)
 add_cookies("cookies.txt")
 ```
 
 ```{r}
-#| eval: true
+#| eval: false
 library(httr2)
 html <- request("https://www.zeit.de/mobilitaet/2024-04/deutschlandticket-klimaschutz-oeffentliche-verkehrsmittel-autos-verkehrswende") |> # start a request
   req_options(cookie = get_cookies("zeit.de", as = "string")) |> # add cookies to be sent with it
@@ -809,25 +809,35 @@ interests_df <- bind_rows(interests_pdf) |>
 
 ## Exercises 5
 
+First, review the material. What you should take from this section:
+
+- websites might contain files containing the data you are interested in. Scraping the links and then downloading the files is a quick way to get access
+- It is possible to extract data from PDFs, but not trivial
+- The package `pdftools` has a `pdf_data` function which gives you much more flexibility to extract information systematically than `pdf_text`
+
+That said, you can practice working with PDFs a litte
+
 1. In the folder /data (relative to this document) there is a PDF with some text. Read it into R
 2. The PDF has two columns, parse the left column of the first page into one object and the right into another
-3. Now combine them in the correct order
-bring the text in the right order as a human would read it
+3. Now combine them and bring the text in the right order as a human would read it
+
+Bonus:
+
 4. Let's assume you wanted to have this text in a table with one column indicating the section and one having the text of the section
-5. Now let's assume you wanted to parse this on the paragraph level instead (hint: remember `str_split_1`)
+5. Now let's assume you wanted to parse this on the paragraph level instead (hint: remember `str_split`)
 
 
 # Optional Homework
 
 You have seen some tools and tricks to scrape websites now.
 But your best ally in web scraping is **experience**!
-Until tomorrow noon, your task is to find a page on Wikipedia you find interesting and scrape content from there.
+Now your task is to **find a page on Wikipedia you find interesting and scrape content** from there.
 Even if you don't fully succeed, document the steps you take and note down where the information can be found.
-If you want to try to get some data you actuall need from a different website, your're also welcome.
+If you want to try to get some data you actually need from a different website, your're also welcome!
 But note that if you collect raw html in R and the data is not where it should be (e.g., the html elements containing panel names do not exist), you might have discovered a more advanced site, which we will cover later. 
-Note that down and try another conference.
+Note that down and try another website.
 
-Deadline: Friday before class
+Deadline: **Friday before class**
 
 
 # Wrap Up
