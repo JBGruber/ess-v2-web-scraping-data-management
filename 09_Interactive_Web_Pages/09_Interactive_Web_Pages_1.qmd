@@ -1,24 +1,56 @@
 ---
-title: "Introduction to Web Scraping and Data Management for Social Scientists"
-subtitle: "Session 9: Scraping Interactive Web Pages"
+title: "Session 9: Scraping Interactive Web Pages"
+subtitle: "Introduction to Web Scraping and Data Management for Social Scientists"
 author: "Johannes B. Gruber"
 date: 2024-08-01
+from: markdown+emoji
 format:
   revealjs:
     smaller: true
+    width: 1600
+    height: 900
     scrollable: true
     code-line-numbers: true
     slide-number: c/t
-    logo: https://essexsummerschool.com/wp-content/uploads/2016/03/essex_logo-mobile.svg
-    self-contained: true
-execute:
-  cache: true
-  echo: true
-highlight-style: pygments
+    logo: ../ess_logo.png
+    embed-resources: true
 bibliography: ../references.bib
+execute:
+  eval: true
+  cache: false
+  echo: true
+engine: knitr
+highlight-style: nord
 ---
 
 # Introduction
+## This Course
+
+<center>
+```{r setup}
+#| echo: false
+#| message: false
+library(tinytable)
+library(tidyverse)
+library(httr2)
+tibble::tribble(
+  ~Day, ~Session,
+  1,  "Introduction",
+  2,  "Data Structures and Wrangling",
+  3,  "Working with Files",
+  4,  "Linking and joining data & SQL",
+  5,  "Scaling, Reporting and Database Software",
+  6,  "Introduction to the Web",
+  7,  "Static Web Pages",
+  8,  "Application Programming Interface (APIs) ",
+  9,  "Interactive Web Pages",
+  10, "Building a Reproducible Research Project",
+) |> 
+  tt() |> 
+  style_tt() |> 
+  style_tt(i = 9, background = "#FDE000")
+```
+</center>
 
 ## The Plan for Today
 
@@ -32,7 +64,7 @@ We will:
 - Emulate a Browser
 - We focus specifically on step 1 below
   
-![Original Image Source: prowebscraper.com](../2_Introduction_to_HTML/media/web_scraping_steps.png)
+![Original Image Source: prowebscraper.com](../06_Introduction_to_the_Web/media/web_scraping_steps.png)
 :::
 
 ::: {.column width="40%" }
@@ -46,7 +78,7 @@ We will:
 # Request & Collect Raw Data: a closer look
 ## Common Problems
 
-Initially we were planning to scrape researchgate.net, since it contains self-created profiles of many researchers.
+Imagine you wanted to scrape researchgate.net, since it contains self-created profiles of many researchers.
 However, when you try to get the html content:
 
 ```{r}
@@ -72,7 +104,7 @@ error_cat(403)
 - This is because the website seems to have some special requirements for serving the (correct) content. These could be:
   - specific user agents
   - other specific headers
-  - login through a browser cookie
+  - login through browser cookies
 - To find out how the browser manages to get the correct response, we can use the Network tab in the inspection tool
 
 
@@ -97,7 +129,7 @@ Finding the right call is not always easy, but in most cases, we want:
 
 When you identified the call, you can right click -> copy -> copy as cURL
 
-## `cURL` Calls
+## More on `cURL` Calls
 
 :::: {.columns}
 
@@ -194,21 +226,15 @@ request("https://www.researchgate.net/profile/Johannes-Gruber-2") |>
 
 ![](media/200.png)
 
-:::{.fragment}
-This used to work quite well when I prepared the slides, but suddenly stopped working over the weekend. 
-So I removed the rest of the slides about it...
-
-![](https://i.kym-cdn.com/entries/icons/original/000/030/359/cover4.jpg)
-:::
 
 # Example: ICA (International Communication Association) 2023 Conference
-## What do we want
+## Goal
 
 :::: {.columns}
 
 ::: {.column width="45%"}
-- General goal in the course: we want to build a database of conference attendance and link this to researchers
-- So for each website:
+- Let's say we want to build a database of conference attendance
+- So for each conference website we want to get:
   - Speakers
   - (Co-)authors
   - Paper/talk titles
@@ -313,7 +339,8 @@ It worked!
 - To get to a certain panel on the fourth day, for example, we have to enter this insane path:
 
 ```{r}
-ica_data[["data"]][["agenda"]][[4]][["time_ranges"]][[3]][[2]][[65]][[1]][["sessions"]][[1]]
+ica_data[["data"]][["agenda"]][[4]][["time_ranges"]][[3]][[2]][[65]][[1]][["sessions"]][[1]] |> 
+  lobstr::tree(max_length = 30)
 ```
 
 - Essentially, someone pressed a relational database into a list format and we now have to scramble to cope with this monstrosity
@@ -378,7 +405,8 @@ Finally we want to parse the HTML in the description column.
 ica_data_df$desc[100]
 ```
 
-We can inspect one of the descriptions using the same function as in session 3:
+We can inspect HTML content by writing it to a temporary file and opening it in the browser.
+Below is a function that does this automatically for you:
 
 ```{r}
 #| eval: false
@@ -451,400 +479,253 @@ ica_data_df_tidy |>
 
 
 
-```{r}
-#| echo: false
-saveRDS(ica_data_df_tidy, "../data/ica_2023.rds")
-```
-
 ## Exercises 1
 
+First, review the material and make sure you have a broad understanding how to:
+
+- look at the requests the browser makes
+- understand how you can copy a curl call
+- practice how you can translate it into R code
+- why we go this route and do not simply use `read_html`
+
 1. Open the ICA site in your browser and inspect the network traffic. Can you identify the call to the programme json?
+2. Copy the curl code to R and translate it to get the same 
 
-2. I excluded panel 613 since the function fails on that. Investigate what the problem is
+# Example: X-Twitter
+## Goal
 
-# Example: 2023 APSA Annual Meeting & Exhibition
-## What do we want
+:::: {.columns}
+::: {.column width="50%"}
+1. Tweets from a Twitter profile
+2. Get the text, likes, shares and comments
+:::
+::: {.column width="50%" }
+[![](media/twitter.png)](https://x.com/EssexSumSchool){target="_blank"}
+:::
+::::
 
-- General goal in the course: we want to build a database of conference attendance and link this to researchers
-- So for each website:
-  - Speakers
-  - (Co-)authors
-  - Paper/talk titles
-  - Panel (to see who was in the same ones)
+## Can we use `rvest`?
 
-[
-  ![](https://convention2.allacademic.com/one/apsa/apsa23/images/conference_image.png)
-](https://convention2.allacademic.com/one/apsa/apsa23/index.php)
-
-## Let's explore the site a little together
-
-1. Find an overview of sessions
-2. Find details about each session
-3. Find details about each talk
-
-## First: Let's try to get the links for each panel/session
-
-![](media/apsa-sessions.png)
-
-This doesn't look too bad! The link even shows a selected_session_id, which could be handy:
-
-```
-https://convention2.allacademic.com/one/apsa/apsa23/index.php?cmd=Online+Program+View+Session&**selected_session_id=2069362**&PHPSESSID=9s7asg63fpouugut6m5m2vj36r
-```
-
-## Scraping the session links
 
 ```{r}
-library(rvest)
-html <- read_html("https://convention2.allacademic.com/one/apsa/apsa23/index.php?cmd=Online+Program+View+Selected+Day+Submissions&selected_day=2023-09-01&program_focus=browse_by_day_submissions")
-
-panels <- html |> 
-  html_elements("li a") |> 
-  html_element("p") |> 
-  html_text2()
-
-panel_links <- html |> 
-  html_elements("li a") |> 
-  html_attr("href")
-tibble(panels, panel_links)
+xhtml <- read_html("https://x.com/EssexSumSchool")
 ```
 
-These do not look like the panel links!
-What's going on?!
-
-## Inspect the retrieved HTML
-
-The object `html` is not that easy to evaluate since it contains html code not made for human eyes and the output is truncated while printing.
-
-We can adapt the function we used before to convert the `rvest` object to a character object and display the content of the object in a browser:
+At least the request isn't failing...
 
 ```{r}
-check_in_browser <- function(html) {
-  tmp <- tempfile(fileext = ".html")
-  writeLines(as.character(html), tmp)
-  browseURL(tmp)
-}
+xhtml |> 
+  html_elements("[data-testid=\"cellInnerDiv\"]")
 ```
+
+At least one of these elements should be here!
+
+## Can we use `rvest`?
+
+:::: {.columns}
+::: {.column width="50%"}
+We can check the conent that we collected from x.com using the function we defined earlier:
 
 ```{r}
 #| eval: false
-check_in_browser(html)
+check_in_browser(xhtml)
 ```
+:::
+::: {.column width="50%" .fragment}
+![](media/ex-twitter.png)
 
-## So what's going on?
+Bummer, it's only giving us the login page...
+:::
+::::
 
-- If something like this happens, the server essentially did not fulfill our request
-- Instead of giving us an error (like the 403 we saw before) it simply delivers us something and reports: OK
-- This is because the website seems to have some special requirements for serving the correct content. These could be
-  - specific user agents
-  - other specific headers
-  - login through a browser cookie
-- To find out how the browser manages to get the correct response (with all the links), we can use the Network tab in the inspection tool again
 
-## Recording the network traffic
+## Probing the hidden/internal API
 
-![](media/apsa-net-traffic.png)
+![](media/twitter_API.png)
 
-## The APSA site essentially uses a hidden API
 
-Following the same strategy as before:
+## Translating a request
 
-1. Copy the network call that gets our content from the browser
-2. pasting it into `httr2::curl_translate()` (make sure to escape mischievous ")
-
+:::: {.columns}
+::: {.column width="50%"}
 ```{r}
-httr2::curl_translate("curl 'https://convention2.allacademic.com/one/apsa/apsa23/index.php?cmd=Online+Program+View+Selected+Day+Submissions&selected_day=2023-08-31&program_focus=browse_by_day_submissions&PHPSESSID=fvjf6ltd4o45kgpv2occcrr0al' \
-  -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7' \
-  -H 'Accept-Language: en-GB,en-US;q=0.9,en;q=0.8' \
-  -H 'Cache-Control: no-cache' \
-  -H 'Connection: keep-alive' \
-  -H 'Cookie: 9s7asg63fpouugut6m5m2vj36r[msg]=e52640799a6bbcebac16c0205ffc2cd9; fvjf6ltd4o45kgpv2occcrr0al[msg]=999aa7691451c5d15ddf91ee0a902f3b; _ga=GA1.2.2046361133.1690277724; _gid=GA1.2.499473362.1690277724; monster[/one/apsa/apsa23/][fvjf6ltd4o45kgpv2occcrr0al][created]=1690532022; _gat=1; _gat_extraTracker=1; _ga_79KQXM4T08=GS1.2.1690530570.6.1.1690532023.0.0.0; _ga_JWPT5JHJ1E=GS1.2.1690530570.6.1.1690532024.0.0.0' \
-  -H 'Pragma: no-cache' \
-  -H 'Referer: https://convention2.allacademic.com/one/apsa/apsa23/index.php?cmd=Online+Program+Load+Focus&program_focus=browse_by_day_submissions&PHPSESSID=fvjf6ltd4o45kgpv2occcrr0al' \
-  -H 'Sec-Fetch-Dest: document' \
-  -H 'Sec-Fetch-Mode: navigate' \
-  -H 'Sec-Fetch-Site: same-origin' \
-  -H 'Sec-Fetch-User: ?1' \
-  -H 'Upgrade-Insecure-Requests: 1' \
-  -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36' \
-  -H 'sec-ch-ua: \"Chromium\";v=\"115\", \"Not/A)Brand\";v=\"99\"' \
-  -H 'sec-ch-ua-mobile: ?0' \
-  -H 'sec-ch-ua-platform: \"Linux\"' \
-  --compressed")
+curl_translate("curl 'https://x.com/i/api/graphql/g4sgqIykZaGDN0_w_ZraYw/UserTweets?variables=%7B%22userId%22%3A%221525016244%22%2C%22count%22%3A20%2C%22includePromotedContent%22%3Atrue%2C%22withQuickPromoteEligibilityTweetFields%22%3Atrue%2C%22withVoice%22%3Atrue%2C%22withV2Timeline%22%3Atrue%7D&features=%7B%22rweb_tipjar_consumption_enabled%22%3Atrue%2C%22responsive_web_graphql_exclude_directive_enabled%22%3Atrue%2C%22verified_phone_label_enabled%22%3Afalse%2C%22creator_subscriptions_tweet_preview_api_enabled%22%3Atrue%2C%22responsive_web_graphql_timeline_navigation_enabled%22%3Atrue%2C%22responsive_web_graphql_skip_user_profile_image_extensions_enabled%22%3Afalse%2C%22communities_web_enable_tweet_community_results_fetch%22%3Atrue%2C%22c9s_tweet_anatomy_moderator_badge_enabled%22%3Atrue%2C%22articles_preview_enabled%22%3Atrue%2C%22tweetypie_unmention_optimization_enabled%22%3Atrue%2C%22responsive_web_edit_tweet_api_enabled%22%3Atrue%2C%22graphql_is_translatable_rweb_tweet_is_translatable_enabled%22%3Atrue%2C%22view_counts_everywhere_api_enabled%22%3Atrue%2C%22longform_notetweets_consumption_enabled%22%3Atrue%2C%22responsive_web_twitter_article_tweet_consumption_enabled%22%3Atrue%2C%22tweet_awards_web_tipping_enabled%22%3Afalse%2C%22creator_subscriptions_quote_tweet_preview_enabled%22%3Afalse%2C%22freedom_of_speech_not_reach_fetch_enabled%22%3Atrue%2C%22standardized_nudges_misinfo%22%3Atrue%2C%22tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled%22%3Atrue%2C%22rweb_video_timestamps_enabled%22%3Atrue%2C%22longform_notetweets_rich_text_read_enabled%22%3Atrue%2C%22longform_notetweets_inline_media_enabled%22%3Atrue%2C%22responsive_web_enhance_cards_enabled%22%3Afalse%7D&fieldToggles=%7B%22withArticlePlainText%22%3Afalse%7D' --compressed -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0' -H 'Accept: */*' -H 'Accept-Language: en-US,en;q=0.5' -H 'Accept-Encoding: gzip, deflate, br, zstd' -H 'Referer: https://x.com/EssexSumSchool' -H 'content-type: application/json' -H 'X-Client-UUID: e57787fa-c0a7-4dd8-afe4-eec2c676cf62' -H 'x-twitter-auth-type: OAuth2Session' -H 'x-csrf-token: 31671b3cac0fc2462816343b781cbe3aba7576438533eccc22fe8b23f9fc99154f1347e7c3793e72473bd4ac978cc500228b97898021825a561b2e5339cce9655515b8cb0ec20648866d7a47e0642fa3' -H 'x-twitter-client-language: en-GB' -H 'x-twitter-active-user: yes' -H 'x-client-transaction-id: ifN3f4/fJUu5rqnSz6p0olGsxzjrZvREdhRXahW+9TFbQCtdX5hd8bw2bPUnxdKNTjZp0ouBJ+LhZf9sWSjkQyTZlIscig' -H 'Sec-Fetch-Dest: empty' -H 'Sec-Fetch-Mode: cors' -H 'Sec-Fetch-Site: same-origin' -H 'authorization: Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA' -H 'Connection: keep-alive' -H 'Cookie: guest_id=v1%3A171990111009154001; night_mode=2; twtr_pixel_opt_in=Y; gt=1818922828541870259; g_state={\"i_p\":1722507175248,\"i_l\":1}; kdt=S7w84InVCLYXaIPfOjU7iDez89j7DzsntO8phmPp; twid=u%3D1632536605; ct0=31671b3cac0fc2462816343b781cbe3aba7576438533eccc22fe8b23f9fc99154f1347e7c3793e72473bd4ac978cc500228b97898021825a561b2e5339cce9655515b8cb0ec20648866d7a47e0642fa3; auth_token=8b79ced278aa8248351f20ac671a35dac93ca5da; att=1-CFR8q37NCOcMj1mQC4pycHeSTEFTNAw2X7EBY1Rl; lang=en-gb; d_prefs=MToxLGNvbnNlbnRfdmVyc2lvbjoyLHRleHRfdmVyc2lvbjoxMDAw; guest_id_ads=v1%3A171990111009154001; guest_id_marketing=v1%3A171990111009154001; personalization_id=\"v1_DwNxJ1HLE+VkeJC51vxzFA==\"' -H 'TE: trailers'")
 ```
-
-3. Running the resulting `httr2` and check if we get the right content
-
+:::
+::: {.column width="50%" }
 ```{r}
-html <- request("https://convention2.allacademic.com/one/apsa/apsa23/index.php?cmd=Online+Program+View+Selected+Day+Submissions&selected_day=2023-08-31&program_focus=browse_by_day_submissions&PHPSESSID=fvjf6ltd4o45kgpv2occcrr0al")  |>  
-  req_headers(
-    Cookie = "Cookie: 9s7asg63fpouugut6m5m2vj36r[msg]=e52640799a6bbcebac16c0205ffc2cd9; fvjf6ltd4o45kgpv2occcrr0al[msg]=999aa7691451c5d15ddf91ee0a902f3b; _ga=GA1.2.2046361133.1690277724; _gid=GA1.2.499473362.1690277724; monster[/one/apsa/apsa23/][fvjf6ltd4o45kgpv2occcrr0al][created]=1690532022; _gat=1; _gat_extraTracker=1; _ga_79KQXM4T08=GS1.2.1690530570.6.1.1690532023.0.0.0; _ga_JWPT5JHJ1E=GS1.2.1690530570.6.1.1690532024.0.0.0",
-    Referer = "https://convention2.allacademic.com/one/apsa/apsa23/index.php?cmd=Online+Program+Load+Focus&program_focus=browse_by_day_submissions&PHPSESSID=fvjf6ltd4o45kgpv2occcrr0al",
+twitter_resp <- request("https://x.com/i/api/graphql/g4sgqIykZaGDN0_w_ZraYw/UserTweets") |> 
+  req_url_query(
+    variables = '{"userId":"1525016244","count":20,"includePromotedContent":true,"withQuickPromoteEligibilityTweetFields":true,"withVoice":true,"withV2Timeline":true}',
+    features = '{"rweb_tipjar_consumption_enabled":true,"responsive_web_graphql_exclude_directive_enabled":true,"verified_phone_label_enabled":false,"creator_subscriptions_tweet_preview_api_enabled":true,"responsive_web_graphql_timeline_navigation_enabled":true,"responsive_web_graphql_skip_user_profile_image_extensions_enabled":false,"communities_web_enable_tweet_community_results_fetch":true,"c9s_tweet_anatomy_moderator_badge_enabled":true,"articles_preview_enabled":true,"tweetypie_unmention_optimization_enabled":true,"responsive_web_edit_tweet_api_enabled":true,"graphql_is_translatable_rweb_tweet_is_translatable_enabled":true,"view_counts_everywhere_api_enabled":true,"longform_notetweets_consumption_enabled":true,"responsive_web_twitter_article_tweet_consumption_enabled":true,"tweet_awards_web_tipping_enabled":false,"creator_subscriptions_quote_tweet_preview_enabled":false,"freedom_of_speech_not_reach_fetch_enabled":true,"standardized_nudges_misinfo":true,"tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled":true,"rweb_video_timestamps_enabled":true,"longform_notetweets_rich_text_read_enabled":true,"longform_notetweets_inline_media_enabled":true,"responsive_web_enhance_cards_enabled":false}',
+    fieldToggles = '{"withArticlePlainText":false}',
   ) |> 
-  req_perform() |>
-  # we add this part to extract the html from the response
-  resp_body_html()
+  req_headers(
+    `User-Agent` = "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+    Accept = "*/*",
+    `Accept-Language` = "en-US,en;q=0.5",
+    `Accept-Encoding` = "gzip, deflate, br, zstd",
+    `content-type` = "application/json",
+    `X-Client-UUID` = "e57787fa-c0a7-4dd8-afe4-eec2c676cf62",
+    `x-twitter-auth-type` = "OAuth2Session",
+    `x-csrf-token` = "31671b3cac0fc2462816343b781cbe3aba7576438533eccc22fe8b23f9fc99154f1347e7c3793e72473bd4ac978cc500228b97898021825a561b2e5339cce9655515b8cb0ec20648866d7a47e0642fa3",
+    `x-twitter-client-language` = "en-GB",
+    `x-twitter-active-user` = "yes",
+    `x-client-transaction-id` = "ifN3f4/fJUu5rqnSz6p0olGsxzjrZvREdhRXahW+9TFbQCtdX5hd8bw2bPUnxdKNTjZp0ouBJ+LhZf9sWSjkQyTZlIscig",
+    authorization = "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA",
+    Cookie = 'guest_id=v1%3A171990111009154001; night_mode=2; twtr_pixel_opt_in=Y; gt=1818922828541870259; g_state={"i_p":1722507175248,"i_l":1}; kdt=S7w84InVCLYXaIPfOjU7iDez89j7DzsntO8phmPp; twid=u%3D1632536605; ct0=31671b3cac0fc2462816343b781cbe3aba7576438533eccc22fe8b23f9fc99154f1347e7c3793e72473bd4ac978cc500228b97898021825a561b2e5339cce9655515b8cb0ec20648866d7a47e0642fa3; auth_token=8b79ced278aa8248351f20ac671a35dac93ca5da; att=1-CFR8q37NCOcMj1mQC4pycHeSTEFTNAw2X7EBY1Rl; lang=en-gb; d_prefs=MToxLGNvbnNlbnRfdmVyc2lvbjoyLHRleHRfdmVyc2lvbjoxMDAw; guest_id_ads=v1%3A171990111009154001; guest_id_marketing=v1%3A171990111009154001; personalization_id=v1_DwNxJ1HLE+VkeJC51vxzFA==',
+    TE = "trailers",
+  ) |> 
+  req_perform()
 ```
+:::
+::::
+
+## Parsing the Twitter data
+
+This is the code we developed in session 2. We can use it again to get a clean table with some interesting information
 
 ```{r}
-panels <- html |> 
-  html_elements("li a") |> 
-  html_text2()
+ess_tweets <- twitter_resp |> 
+  resp_body_json()
 
-panel_links <- html |> 
-  html_elements("li a") |> 
-  html_attr("href")
 
-panels <- tibble(panels, panel_links) |> 
-  filter(str_detect(panel_links, "selected_session_id="))
-```
+entries <- pluck(ess_tweets, "data", "user", "result", "timeline_v2", "timeline", "instructions", 3L, "entries")
 
-4. Adapting the `httr2` call to make it usable to request other data
+tweets <- map(entries, function(x) pluck(x, "content", "itemContent", "tweet_results", "result", "legacy"))
 
-## Wrapping the secret APSA API
-
-After some investigation, I noticed that the API returns the right information when it has two things in the call:
-
-- A valid Session ID (`PHPSESSID` query parameter)
-- A valid referrer header with the same Session ID
-- A Cookie string which matches the Session ID
-
-```{r}
-request_apsa <- function(url,
-                       sess_id = NULL,
-                       cookies = "9s7asg63fpouugut6m5m2vj36r[msg]=e52640799a6bbcebac16c0205ffc2cd9; fvjf6ltd4o45kgpv2occcrr0al[msg]=999aa7691451c5d15ddf91ee0a902f3b; _ga=GA1.2.2046361133.1690277724; _gid=GA1.2.499473362.1690277724; monster[/one/apsa/apsa23/][fvjf6ltd4o45kgpv2occcrr0al][created]=1690532022; _gat=1; _gat_extraTracker=1; _ga_79KQXM4T08=GS1.2.1690530570.6.1.1690532023.0.0.0; _ga_JWPT5JHJ1E=GS1.2.1690530570.6.1.1690532024.0.0.0") {
-  
-  # extract the session id from the URL if not given
-  sess_id <- str_extract(url, "&PHPSESSID=[a-z0-9]+(&|$)")
-  referer <- paste0(
-    "https://convention2.allacademic.com/one/apsa/apsa23/index.php?cmd=Online+Program+Load+Focus&program_focus=browse_by_day_submissions", 
-    sess_id
+tweets_df <- map(tweets, function(t) {
+  tibble(
+    id = t$id_str,
+    user_id = t$user_id_str,
+    created_at = t$created_at,
+    full_text = t$full_text,
+    favorite_count = t$favorite_count,
+    retweet_count = t$retweet_count,
+    bookmark_count = t$bookmark_count
   )
-  
-  request(url) |> 
-    req_headers(
-      Referer = referer,
-      Cookie = cookies
-    ) |> 
-    # Let's set a cautious rate in case they check for scraping
-    req_throttle(6 / 60) |> 
-    req_perform() |> 
-    resp_body_html()
-}
-```
-
-## Testing the function
-
-Let's test this on a panel:
-
-```{r}
-panel_3_html <- request_apsa(panels$panel_links[3])
-```
-
-
-```{r}
-#| eval: false
-check_in_browser(panel_3_html)
-```
-
-![](media/apsa-panel.png)
-
-## Write some code to parse the panel
-
-Luckily, the HTML is quite clean and easy to parse with the tools we've learned already:
-
-```{r}
-panel_title <- panel_3_html |> 
-  html_element("h3") |> 
-  html_text2()
-
-panel_description <- panel_3_html |> 
-  html_element("blockquote") |> 
-  html_text2()
-
-paper_urls <- panel_3_html |> 
-  html_elements("li a") |> 
-  html_attr("href")
-
-paper_description <- panel_3_html |> 
-  html_elements("li a") |> 
-  html_text2()
-
-tibble(paper_description, paper_urls) |> 
-  # we collected some trash, but can filter it out easily using the URL
-  filter(str_detect(paper_urls, "selected_paper_id=")) |> 
-  # We separate paper title and authors from each other
-  separate(paper_description, into = c("paper", "authors"), sep = " - ") |> 
-  # If there are several authors they are divided by ; (we split them up)
-  mutate(author = strsplit(authors, split = "; ")) |>
-  # pull the list out into a long format
-  unnest(author) |> 
-  # And add some infoormation from above
-  mutate(panel_title = panel_title,
-         paper_description = panel_description)
-```
-
-## Let's wrap this in a function
-
-We combine the request for a panel's html and the parsing in one function:
-
-```{r}
-scrape_panel <- function(url) {
-  sess_id <- str_extract(url, "(?<=selected_session_id=)\\d+")
-  message("Requesting session ", sess_id)
-  # request the URL with out request function
-  html <- request_apsa(url)
-  
-  
-  # Running the parser
-  title <- html |> 
-    html_element("h3") |> 
-    html_text2()
-  
-  description <- html |> 
-    html_element("blockquote") |> 
-    html_text2()
-  
-  paper_urls <- html |> 
-    html_elements("li a") |> 
-    html_attr("href")
-  
-  paper_description <- html |> 
-    html_elements("li a") |> 
-    html_text2()
-  
-  tibble(paper_description, paper_urls) |> 
-    filter(str_detect(paper_urls, "selected_paper_id=")) |> 
-    separate(paper_description, into = c("paper", "authors"), sep = " - ") |> 
-    mutate(author = strsplit(authors, split = ";")) |> 
-    unnest(author) |> 
-    mutate(panel_title = title,
-           panel_description = description)
-}
-
-scrape_panel(panels$panel_links[4])
-```
-
-## Adding some caching
-
-- We identified 455 panels on a single day of APSA.
-- So we will have to make many requests in a loop 
-- If the loop breaks, all progress is gone :(
-- To prevent that, we should build some caching into the function
-
-```{r}
-scrape_panel <- function(url,
-                         cache_dir = "../data/apsa2023/") {
-  
-  # the default is an empty file name
-  f_name <- ""
-  
-  # If the cache_dir is not empty, a file name in constructed
-  if (!is.null(cache_dir)) {
-    # we make sure that the cache folder is created if it does not exist
-    dir.create(cache_dir, showWarnings = FALSE)
-    # we extract the session ID from the URL
-    sess_id <- str_extract(url, "(?<=selected_session_id=)\\d+")
-    # and use it to construct a file path for saving
-    f_name <- file.path(cache_dir, paste0(sess_id, ".rds"))
-  }
-  
-  # if the cache file already exists, we can skip this session :)
-  if (!file.exists(f_name)) {
-    message("Requesting session ", sess_id)
-    html <- request_apsa(url)
-    
-    title <- html |> 
-      html_element("h3") |> 
-      html_text2()
-    
-    description <- html |> 
-      html_element("blockquote") |> 
-      html_text2()
-    
-    paper_urls <- html |> 
-      html_elements("li a") |> 
-      html_attr("href")
-    
-    paper_description <- html |> 
-      html_elements("li a") |> 
-      html_text2()
-    
-    out <- tibble(paper_description, paper_urls) |> 
-      filter(str_detect(paper_urls, "selected_paper_id=")) |> 
-      separate(paper_description, into = c("paper", "authors"), sep = " - ") |> 
-      mutate(author = strsplit(authors, split = ";")) |> 
-      unnest(author) |> 
-      mutate(panel_title = title,
-             panel_description = description)
-    if (!is.null(cache_dir)) {
-      saveRDS(out, f_name)
-    }
-  } else {
-    # If the file does not exist, we read the cached panel data
-    out <- readRDS(f_name)
-  }
-  
-  out
-}
-
-scrape_panel(panels$panel_links[4])
-```
-
-Much quicker, since I've done this before!
-
-## Let's bring it all together
-
-We loop over the days of APSA to collect all links:
-
-```{r}
-days <- seq(as.Date("2023-08-30"), as.Date("2023-09-03"), 1)
-panel_links <- map(days, function(d) {
-  html <- request_apsa(
-    paste0("https://convention2.allacademic.com/one/apsa/apsa23/index.php?cmd=Online+Program+View+Selected+Day+Submissions&selected_day=",
-    d,
-    "&program_focus=browse_by_day_submissions&PHPSESSID=fvjf6ltd4o45kgpv2occcrr0al"
-    ))
-  
-  html |> 
-    html_elements("li a") |> 
-    html_attr("href") |> 
-    str_subset("session_id")
 }) |> 
-  unlist()
-length(panel_links)
-```
-
-And now we iterate over these links to collect all panel data:
-
-```{r}
-apsa_data <- map(panel_links, scrape_panel) |> 
   bind_rows()
+tweets_df
 ```
 
-![](media/loop.png)
 
-We make sure to save the combined data:
+## Translating a second request
+
+:::: {.columns}
+::: {.column width="50%"}
+```{r}
+curl_translate("curl 'https://x.com/i/api/graphql/g4sgqIykZaGDN0_w_ZraYw/UserTweets?variables=%7B%22userId%22%3A%221525016244%22%2C%22count%22%3A20%2C%22cursor%22%3A%22DAABCgABGT4dVnF__-sKAAIZI4Qc2hsQ5AgAAwAAAAIAAA%22%2C%22includePromotedContent%22%3Atrue%2C%22withQuickPromoteEligibilityTweetFields%22%3Atrue%2C%22withVoice%22%3Atrue%2C%22withV2Timeline%22%3Atrue%7D&features=%7B%22rweb_tipjar_consumption_enabled%22%3Atrue%2C%22responsive_web_graphql_exclude_directive_enabled%22%3Atrue%2C%22verified_phone_label_enabled%22%3Afalse%2C%22creator_subscriptions_tweet_preview_api_enabled%22%3Atrue%2C%22responsive_web_graphql_timeline_navigation_enabled%22%3Atrue%2C%22responsive_web_graphql_skip_user_profile_image_extensions_enabled%22%3Afalse%2C%22communities_web_enable_tweet_community_results_fetch%22%3Atrue%2C%22c9s_tweet_anatomy_moderator_badge_enabled%22%3Atrue%2C%22articles_preview_enabled%22%3Atrue%2C%22tweetypie_unmention_optimization_enabled%22%3Atrue%2C%22responsive_web_edit_tweet_api_enabled%22%3Atrue%2C%22graphql_is_translatable_rweb_tweet_is_translatable_enabled%22%3Atrue%2C%22view_counts_everywhere_api_enabled%22%3Atrue%2C%22longform_notetweets_consumption_enabled%22%3Atrue%2C%22responsive_web_twitter_article_tweet_consumption_enabled%22%3Atrue%2C%22tweet_awards_web_tipping_enabled%22%3Afalse%2C%22creator_subscriptions_quote_tweet_preview_enabled%22%3Afalse%2C%22freedom_of_speech_not_reach_fetch_enabled%22%3Atrue%2C%22standardized_nudges_misinfo%22%3Atrue%2C%22tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled%22%3Atrue%2C%22rweb_video_timestamps_enabled%22%3Atrue%2C%22longform_notetweets_rich_text_read_enabled%22%3Atrue%2C%22longform_notetweets_inline_media_enabled%22%3Atrue%2C%22responsive_web_enhance_cards_enabled%22%3Afalse%7D&fieldToggles=%7B%22withArticlePlainText%22%3Afalse%7D' --compressed -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0' -H 'Accept: */*' -H 'Accept-Language: en-US,en;q=0.5' -H 'Accept-Encoding: gzip, deflate, br, zstd' -H 'Referer: https://x.com/EssexSumSchool' -H 'content-type: application/json' -H 'X-Client-UUID: e57787fa-c0a7-4dd8-afe4-eec2c676cf62' -H 'x-twitter-auth-type: OAuth2Session' -H 'x-csrf-token: 31671b3cac0fc2462816343b781cbe3aba7576438533eccc22fe8b23f9fc99154f1347e7c3793e72473bd4ac978cc500228b97898021825a561b2e5339cce9655515b8cb0ec20648866d7a47e0642fa3' -H 'x-twitter-client-language: en-GB' -H 'x-twitter-active-user: yes' -H 'x-client-transaction-id: KlDU3Cx8hugaDQpxbAnXAfIPZJtIxVfn1bf0ybYdVpL444j+/Dv+Uh+Vz1aEZnEu7WnLcShbjnWhSlaEbxumlg8ly/67KQ' -H 'Sec-Fetch-Dest: empty' -H 'Sec-Fetch-Mode: cors' -H 'Sec-Fetch-Site: same-origin' -H 'authorization: Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA' -H 'Connection: keep-alive' -H 'Cookie: guest_id=v1%3A171990111009154001; night_mode=2; twtr_pixel_opt_in=Y; gt=1818922828541870259; g_state={\"i_p\":1722507175248,\"i_l\":1}; kdt=S7w84InVCLYXaIPfOjU7iDez89j7DzsntO8phmPp; twid=u%3D1632536605; ct0=31671b3cac0fc2462816343b781cbe3aba7576438533eccc22fe8b23f9fc99154f1347e7c3793e72473bd4ac978cc500228b97898021825a561b2e5339cce9655515b8cb0ec20648866d7a47e0642fa3; auth_token=8b79ced278aa8248351f20ac671a35dac93ca5da; att=1-CFR8q37NCOcMj1mQC4pycHeSTEFTNAw2X7EBY1Rl; lang=en-gb; d_prefs=MToxLGNvbnNlbnRfdmVyc2lvbjoyLHRleHRfdmVyc2lvbjoxMDAw; guest_id_ads=v1%3A171990111009154001; guest_id_marketing=v1%3A171990111009154001; personalization_id=\"v1_DwNxJ1HLE+VkeJC51vxzFA==\"' -H 'TE: trailers'")
+```
+:::
+::: {.column width="50%" }
+```{r}
+twitter_resp2 <- request("https://x.com/i/api/graphql/g4sgqIykZaGDN0_w_ZraYw/UserTweets") |> 
+  req_url_query(
+    variables = '{"userId":"1525016244","count":20,"cursor":"DAABCgABGT4dVnF__-sKAAIZI4Qc2hsQ5AgAAwAAAAIAAA","includePromotedContent":true,"withQuickPromoteEligibilityTweetFields":true,"withVoice":true,"withV2Timeline":true}',
+    features = '{"rweb_tipjar_consumption_enabled":true,"responsive_web_graphql_exclude_directive_enabled":true,"verified_phone_label_enabled":false,"creator_subscriptions_tweet_preview_api_enabled":true,"responsive_web_graphql_timeline_navigation_enabled":true,"responsive_web_graphql_skip_user_profile_image_extensions_enabled":false,"communities_web_enable_tweet_community_results_fetch":true,"c9s_tweet_anatomy_moderator_badge_enabled":true,"articles_preview_enabled":true,"tweetypie_unmention_optimization_enabled":true,"responsive_web_edit_tweet_api_enabled":true,"graphql_is_translatable_rweb_tweet_is_translatable_enabled":true,"view_counts_everywhere_api_enabled":true,"longform_notetweets_consumption_enabled":true,"responsive_web_twitter_article_tweet_consumption_enabled":true,"tweet_awards_web_tipping_enabled":false,"creator_subscriptions_quote_tweet_preview_enabled":false,"freedom_of_speech_not_reach_fetch_enabled":true,"standardized_nudges_misinfo":true,"tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled":true,"rweb_video_timestamps_enabled":true,"longform_notetweets_rich_text_read_enabled":true,"longform_notetweets_inline_media_enabled":true,"responsive_web_enhance_cards_enabled":false}',
+    fieldToggles = '{"withArticlePlainText":false}',
+  ) |> 
+  req_headers(
+    `User-Agent` = "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+    Accept = "*/*",
+    `Accept-Language` = "en-US,en;q=0.5",
+    `Accept-Encoding` = "gzip, deflate, br, zstd",
+    `content-type` = "application/json",
+    `X-Client-UUID` = "e57787fa-c0a7-4dd8-afe4-eec2c676cf62",
+    `x-twitter-auth-type` = "OAuth2Session",
+    `x-csrf-token` = "31671b3cac0fc2462816343b781cbe3aba7576438533eccc22fe8b23f9fc99154f1347e7c3793e72473bd4ac978cc500228b97898021825a561b2e5339cce9655515b8cb0ec20648866d7a47e0642fa3",
+    `x-twitter-client-language` = "en-GB",
+    `x-twitter-active-user` = "yes",
+    `x-client-transaction-id` = "KlDU3Cx8hugaDQpxbAnXAfIPZJtIxVfn1bf0ybYdVpL444j+/Dv+Uh+Vz1aEZnEu7WnLcShbjnWhSlaEbxumlg8ly/67KQ",
+    authorization = "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA",
+    Cookie = 'guest_id=v1%3A171990111009154001; night_mode=2; twtr_pixel_opt_in=Y; gt=1818922828541870259; g_state={"i_p":1722507175248,"i_l":1}; kdt=S7w84InVCLYXaIPfOjU7iDez89j7DzsntO8phmPp; twid=u%3D1632536605; ct0=31671b3cac0fc2462816343b781cbe3aba7576438533eccc22fe8b23f9fc99154f1347e7c3793e72473bd4ac978cc500228b97898021825a561b2e5339cce9655515b8cb0ec20648866d7a47e0642fa3; auth_token=8b79ced278aa8248351f20ac671a35dac93ca5da; att=1-CFR8q37NCOcMj1mQC4pycHeSTEFTNAw2X7EBY1Rl; lang=en-gb; d_prefs=MToxLGNvbnNlbnRfdmVyc2lvbjoyLHRleHRfdmVyc2lvbjoxMDAw; guest_id_ads=v1%3A171990111009154001; guest_id_marketing=v1%3A171990111009154001; personalization_id=v1_DwNxJ1HLE+VkeJC51vxzFA==',
+    TE = "trailers",
+  ) |> 
+  req_perform()
+```
+:::
+::::
+
+## Parsing the Twitter data
 
 ```{r}
-#| eval: false
-saveRDS(apsa_data, "../data/apsa_2023_data.rds")
+ess_tweets2 <- twitter_resp2 |> 
+  resp_body_json()
+
+
+entries2 <- pluck(ess_tweets, "data", "user", "result", "timeline_v2", "timeline", "instructions", 2L, "entries")
+
+tweets2 <- map(entries, function(x) pluck(x, "content", "itemContent", "tweet_results", "result", "legacy"))
+
+tweets_df2 <- map(tweets2, function(t) {
+  tibble(
+    id = t$id_str,
+    user_id = t$user_id_str,
+    created_at = t$created_at,
+    full_text = t$full_text,
+    favorite_count = t$favorite_count,
+    retweet_count = t$retweet_count,
+    bookmark_count = t$bookmark_count
+  )
+}) |> 
+  bind_rows()
+tweets_df
 ```
 
-And let's check the most prolific authors again:
-
-```{r}
-apsa_data |> 
-  count(author, sort = TRUE)
-```
 
 
-## Exercises 2
 
-1. Use your own cookies and session ID to run the function on the page with the URLs
+## Mission failure
 
-2. Check the German news website https://www.zeit.de/. It has an interesting quirk that prevents you from scraping the content of the site. What is it and how could you get around it?
+I stopped at this point since there are three issue that are unclear to resolve:
 
+1. How do we get the "cursor" value to keep scrolling?
+2. We have to send several identifiers
+3. It is not clear how stable x-csrf-token, authorization, and the cookies are
+
+# Summary: hidden APIs
+## What are they
+
+- used by services of a company to communicate with each other
+- code on a website often uses one to download additional conent
+- the browser logs them and provides them to us as cURL calls
+
+## What are they good for?
+
+
+:::: {.columns}
+
+::: {.column width="60%"}
+- We can often use them to get content that is otherwise unavailable
+- We can study them to find out what requests the website server accepts
+- Some websites allow access just using a special header or cookies
+- If they are somewhat flexible we can wrap them in a function or package
+- This can allow us to gather data on scale
+:::
+
+::: {.column width="40%" }
+![](https://raw.githubusercontent.com/JBGruber/traktok/main/man/figures/logo.png)
+:::
+
+::::
+
+## Issues
+
+:::: {.columns}
+
+::: {.column width="40%" .incremental}
+- Companies have mechanisms to counter scraping:
+  - signing specific requests (TikTok)
+  - obscuring pagination (Twitter)
+  - rate limiting requests per second/minute/day and user/IP(Twitter)
+  - expiring session tokens (telegraaf.nl)
+:::
+
+::: {.column width="60%"}
+![](https://hackernoon.com/hn-images/0*MPt2rectMhwklT63.jpg)
+:::
+::::
 
 # Wrap Up
 
