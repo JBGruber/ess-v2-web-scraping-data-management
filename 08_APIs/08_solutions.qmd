@@ -1,0 +1,209 @@
+---
+title: "solutions session 7"
+format: html
+---
+
+---
+title: "solutions day 1"
+format: html
+---
+
+## Exercises 1
+
+1. `httr2` has several more functions to customize how a request is performed. What do these functions do
+
+- `req_throttle`: makes sure to not exceed rate limits of the API by stopping and waiting at a given rate
+- `req_error`: controls how errors should be handled. Can change the interpretation of http codes and display a different error body using a function
+- `req_retry`: if a request fails, this function controls whether, after how long and how often the request is retired
+
+2. You might want to add more information to the data.frame. Adapt the function parse_response to also extract: apiUrl, lastModifiedDate, pillarId
+
+```{r}
+parse_response <- function(res) {
+  tibble(
+    id = res$id,
+    type = res$type,
+    time = lubridate::ymd_hms(res$webPublicationDate),
+    headline = res$webTitle,
+    text = read_html(pluck(res, "blocks", "body", 1, "bodyHtml")) |> html_text2(),
+    api_url = res$apiUrl,
+    pillar_id = res$pillarId,
+    last_modified = pluck(res, "blocks", "body", 1, "lastModifiedDate")
+  )
+}
+parse_response(res)
+```
+
+
+3. Make your own request to the API with a different search term
+
+```{r}
+library(httr2)
+library(tidyverse, warn.conflicts = FALSE)
+req <- request("https://content.guardianapis.com") |>  
+  req_url_path("search") |>                            
+  req_method("GET") |>                                 
+  req_timeout(seconds = 60) |>                            
+  req_headers("User-Agent" = "httr2 guardian test") |> 
+  req_url_query(                                       
+    q = "my own request",  # <- this is where the search term goes
+    "show-blocks" = "all"
+  ) |> 
+  req_url_query(
+    "api-key" = Sys.getenv("GUARDIAN_KEY")
+  )
+  
+# we can also directly parse this
+req |> 
+  req_perform() |> 
+  resp_body_json() |> 
+  pluck("response", "results") |>
+  map(parse_response) |> 
+  bind_rows()
+```
+
+
+4. Request page 2 from the API
+
+The documenation at <https://open-platform.theguardian.com/documentation/> tells us the following:
+
+> In order to page through the results, you can add the page keyword to your query.
+
+```{r}
+req <- request("https://content.guardianapis.com") |>  
+  req_url_path("search") |>                            
+  req_method("GET") |>                                 
+  req_timeout(seconds = 60) |>                            
+  req_headers("User-Agent" = "httr2 guardian test") |> 
+  req_url_query(                                       
+    q = "my own request",
+    "show-blocks" = "all",
+    page = 2  # <- this is where we can add the page parameter
+  ) |> 
+  req_url_query(
+    "api-key" = Sys.getenv("GUARDIAN_KEY")
+  )
+```
+
+
+## Exercises 2
+
+To get more information about an MP, we can use the endpoint "/api/Members/{id}/Biography"
+
+1. Search for an MP you are interested in with the function above and use the id on the documentation website with "Try it out"
+
+- you can just search the page <https://members-api.parliament.uk/index.html> for "/api/Members/{id}/Biography"
+- the ID of John Major is 119, which you can use as an example
+- It produces this call
+
+```
+curl -X 'GET' \
+  'https://members-api.parliament.uk/api/Members/119/Biography' \
+  -H 'accept: text/plain'
+```
+
+2. Copy the Curl call and translate it into `httr2` code
+
+```{r}
+library(httr2)
+curl_translate("curl -X 'GET' \
+  'https://members-api.parliament.uk/api/Members/119/Biography' \
+  -H 'accept: text/plain'")
+```
+
+3. Wrangle the `governmentPosts` returned in the data into a tabular format
+
+```{r}
+resp <- request("https://members-api.parliament.uk/api/Members/119/Biography") |> 
+  req_method("GET") |> 
+  req_headers(
+    accept = "text/plain",
+  ) |> 
+  req_perform()
+
+# you could check which content type is returned
+resp_content_type(resp)
+
+
+major <- resp |> 
+  resp_body_json()
+
+government_posts <- purrr::pluck(major, "value", "governmentPosts")
+dplyr::bind_rows(government_posts)
+```
+
+Bonus:
+
+4. Write a function which lets you request information given an ID and which wrangles the results
+
+```{r}
+get_government_posts <- function(id) {
+  
+  resp <- request("https://members-api.parliament.uk") |> 
+    req_url_path("/api/Members", id, "Biography") |> 
+    req_method("GET") |> 
+    req_headers(
+      accept = "text/plain",
+    ) |> 
+    req_perform()
+  
+  # you could check which content type is returned
+  if (resp_content_type(resp) != "application/json") {
+    stop("incorrect data type returned from API")
+  }
+  
+  major <- resp |> 
+    resp_body_json()
+  
+  government_posts <- purrr::pluck(major, "value", "governmentPosts")
+  dplyr::bind_rows(government_posts)
+}
+get_government_posts(119)
+```
+
+
+5. Two more interesting endpoints are "/api/Posts/GovernmentPosts" and "/api/Posts/OppositionPosts". What do they do and how can you request data from them
+
+
+- "/api/Posts/GovernmentPosts": Returns a list of government posts.
+
+```{r}
+curl_translate("curl -X 'GET' \
+  'https://members-api.parliament.uk/api/Posts/OppositionPosts?departmentId=51' \
+  -H 'accept: text/plain'")
+
+request("https://members-api.parliament.uk/api/Posts/OppositionPosts") |> 
+  req_method("GET") |> 
+  req_url_query(
+    departmentId = "51",
+  ) |> 
+  req_headers(
+    accept = "text/plain",
+  ) |> 
+  req_perform()
+```
+
+
+
+- "/api/Posts/OppositionPosts": Returns a list of opposition posts.
+
+
+```{r}
+curl_translate("curl -X 'GET' \
+  'https://members-api.parliament.uk/api/Posts/GovernmentPosts?departmentId=51' \
+  -H 'accept: text/plain'")
+
+request("https://members-api.parliament.uk/api/Posts/GovernmentPosts") |> 
+  req_method("GET") |> 
+  req_url_query(
+    departmentId = "51",
+  ) |> 
+  req_headers(
+    accept = "text/plain",
+  ) |> 
+  req_perform()
+```
+
+- Now what is not immediately clear about these two endpoints is how to obtain the department ID. However, there is another endpoint, "/api/Posts/Departments/{type}" which returns a list of departments, including their ID. I made a request and looked through the list to find the ID for the home office (51). This is what I used above. But you can of course use any other ID here.
+
+

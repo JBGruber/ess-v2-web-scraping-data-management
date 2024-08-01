@@ -210,4 +210,110 @@ article_df <- tibble(date, author, headline, text)
 ```
 
 
+## Exercises 5
 
+1. In the folder /data (relative to this document) there is a PDF with some text. Read it into R
+
+```{r}
+library(pdftools)
+scrp_dat <- pdf_data("data/example.pdf", font_info = TRUE)
+```
+
+2. The PDF has two columns, parse the left column of the first page into one object and the right into another
+
+```{r}
+page <- scrp_dat[[1]]
+
+left_column <- page |> 
+  filter(x < 300) |> 
+  group_by(y) |> 
+  summarise(text = paste(text, collapse = " "),
+            font_name = unique(font_name),
+            font_size = unique(font_size))
+
+right_column <- page |> 
+  filter(x > 300) |> 
+  group_by(y) |> 
+  summarise(text = paste(text, collapse = " "),
+            font_name = unique(font_name),
+            font_size = unique(font_size))
+```
+
+
+3. Now combine them in the correct order bring the text in the right order as a human would read it
+
+```{r}
+columns <- bind_rows(left_column, right_column)
+```
+
+
+4. Let's assume you wanted to have this text in a table with one column indicating the section and one having the text of the section
+
+```{r}
+page1_df <- page |> 
+  mutate(
+    section_title = font_size == 20,
+    section_text = font_size == 11,
+    section = cumsum(section_title)
+  ) |> 
+  group_by(section, section_title) |> 
+  summarise(
+    section_title = paste(text[section_title], collapse = " "),
+    text = paste(text, collapse = "\n"),
+  ) |> 
+  mutate(section_title = ifelse(section_title == "", NA_character_, section_title)) |> 
+  fill(section_title, .direction = "up") |> 
+  filter(section_title != text)
+```
+
+
+5. Now let's assume you wanted to parse this on the paragraph level instead (hint: remember `str_split`)
+
+```{r}
+page1_df |> 
+  mutate(paragraph = str_split(text, "\n")) |> 
+  unnest_longer(paragraph)
+```
+
+
+3. Let's assume you wanted to have this text in a table with one column indicating the section and one having the text of the section
+
+```{r}
+scrp_dat_ordered |> 
+  mutate(
+    section_title = font_size == 20,
+    section_text = font_size == 11,
+    section = cumsum(section_title)
+  ) |> 
+  group_by(section, section_title) |> 
+  summarise(
+    section_title = paste(text[section_title], collapse = " "),
+    text = paste(text, collapse = " "),
+  ) |> 
+  mutate(section_title = ifelse(section_title == "", NA_character_, section_title)) |> 
+  fill(section_title, .direction = "up") |> 
+  filter(section_title != text)
+```
+
+4. Now let's assume you wanted to parse this on the paragraph level instead
+
+```{r}
+scrp_dat_ordered |> 
+  mutate(
+    section_title = font_size == 20,
+    section_text = font_size == 11,
+    section = cumsum(section_title),
+    par_start = y == lag(y) + 24
+  ) |> 
+  group_by(section) |> 
+  mutate(paragraph = cumsum(ifelse(is.na(par_start), FALSE, par_start))) |> 
+  group_by(section, section_title, paragraph) |> 
+  summarise(
+    section_title = paste(text[section_title], collapse = " "),
+    text = paste(text, collapse = " "),
+  ) |> 
+  mutate(section_title = ifelse(section_title == "", NA_character_, section_title)) |> 
+  ungroup() |> 
+  fill(section_title, .direction = "up") |> 
+  filter(section_title != text)
+```
