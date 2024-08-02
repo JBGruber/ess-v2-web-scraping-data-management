@@ -1,19 +1,234 @@
 ---
-title: "Introduction to Web Scraping and Data Management for Social Scientists"
-subtitle: "Session 5:	Scaling, Reporting and Database Software"
+title: "Session 10: Conclusion"
+subtitle: "Introduction to Web Scraping and Data Management for Social Scientists"
 author: "Johannes B. Gruber"
 date: 2024-08-02
+from: markdown+emoji
 format:
   revealjs:
     smaller: true
+    width: 1600
+    height: 900
     scrollable: true
     code-line-numbers: true
     slide-number: c/t
-    logo: https://essexsummerschool.com/wp-content/uploads/2016/03/essex_logo-mobile.svg
-    self-contained: true
+    logo: ../ess_logo.png
+    embed-resources: true
+bibliography: ../references.bib
 execute:
-  cache: true
+  eval: true
+  cache: false
   echo: true
-highlight-style: pygments
+engine: knitr
+highlight-style: nord
 ---
+
+## This Course
+
+<center>
+```{r setup}
+#| echo: false
+#| message: false
+library(tinytable)
+library(tidyverse)
+library(httr2)
+tibble::tribble(
+  ~Day, ~Session,
+  1,  "Introduction",
+  2,  "Data Structures and Wrangling",
+  3,  "Working with Files",
+  4,  "Linking and joining data & SQL",
+  5,  "Scaling, Reporting and Database Software",
+  6,  "Introduction to the Web",
+  7,  "Static Web Pages",
+  8,  "Application Programming Interface (APIs) ",
+  9,  "Interactive Web Pages",
+  10, "Conclusion",
+) |> 
+  tt() |> 
+  style_tt() |> 
+  style_tt(i = 10, background = "#FDE000")
+```
+</center>
+
+# 1. Introduction
+## 1. Introduction: What we learned about
+
+- Using Quarto and RStudio projects in the course
+- Packages and functions in R
+- How to use the R help docs and other ways to learn more
+- Functions, Data, Loops and If in R
+- Tidyverse vs. base R and the pipe |> 
+- Literate programming
+
+
+# 2. Data Structures and Wrangling
+## 2. Data Structures and Wrangling: What we learned about
+
+:::: {.columns}
+::: {.column width="70%"}
+- how data plays into the research process
+- the difference between *content* and *structure* of data
+- about the basic data structures in R and what they are good for
+- how to turn information into data
+- the key role of tables
+- and how to turn bad data structures into good tables
+:::
+::: {.column width="30%" }
+![](https://images.unsplash.com/photo-1557813282-bcd50093e38f?q=80&w=2576&auto=format&fit=crop)
+[Zane Lee](https://unsplash.com/@zane404) via unsplash.com
+:::
+::::
+
+
+# 3. Working with Files
+## 3. Working with Files: What we learned about
+
+:::: {.columns}
+
+::: {.column width="60%"}
+In this session, you learn:
+
+- how to use files efficiently and how to solve problems using files
+- good practices for transparent and efficient file usage
+- how to work with many files at the same time
+- and how you can facilitate collaborative working with files
+:::
+
+::: {.column width="30%" }
+![](https://images.unsplash.com/photo-1541362036326-097742faf412?q=80&w=2576&auto=format&fit=crop)
+[JF Martin](https://unsplash.com/@numericcitizen) via unsplash.com
+:::
+
+::::
+
+# 4. Linking and joining data & SQL
+## 4. Linking and joining data & SQL: What we learned about
+
+:::: {.columns}
+
+::: {.column width="60%"}
+In this session, you learn:
+
+- why and how to work with relational data
+- how to join data from different tables in `R`
+- how to join data from different tables in `SQL`
+:::
+
+::: {.column width="30%" }
+![](../04_Linking_and_joining_data_SQL/media/relational.jpeg)
+Via DALL-E
+:::
+::::
+
+# 5. Scaling, Reporting and Database Software
+## 5. Scaling, Reporting and Database Software: What we learned about
+
+:::: {.columns}
+::: {.column width="60%"}
+In this session, you learn:
+
+- Repetition: DBMS
+- Working with PostgreSQL
+- Working with text databases
+- Benchmarking
+- Final scaling tips
+:::
+::: {.column width="30%" }
+![](https://images.unsplash.com/photo-1607720146778-68d2d56fa38c?q=80&w=2576&auto=format&fit=crop)
+[Nik](https://unsplash.com/@helloimnik) via unsplash.com
+:::
+::::
+
+# 6. Introduction to the Web
+## 6. Introduction to the Web: What we learned about
+
+:::: {.columns}
+::: {.column width="60%"}
+In this session, we learn how to **scout** data in the wild.
+We will:
+
+- discuss web scraping from a theoretical point of view:
+  - What is web scraping?
+  - Why should you learn it?
+  - What legal and ethical implications should you keep in mind?
+- learn a bit more about how the Internet works
+  - What is HTML
+  - What is CSS
+:::
+::: {.column width="40%" }
+![](https://images.unsplash.com/photo-1585615711517-b22136b2019f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1548&q=80)
+[Angie Gade](https://unsplash.com/@angiefeelstherush) via unsplash.com
+:::
+::::
+
+# 7. Static Web Pages
+## 7. Static Web Pages: What we learned about
+
+:::: {.columns}
+::: {.column width="60%"}
+In this session, we trap some **docile data** that wants to be found.
+We will:
+
+- Go over some parsing examples:
+  - Wikipedia: World World Happiness Report
+- Discuss some examples of good approaches to data wrangling
+- Go into a bit more detail on requesting raw data
+  
+![Original Image Source: prowebscraper.com](../06_Introduction_to_the_Web/media/web_scraping_steps.png)
+:::
+::: {.column width="40%" }
+![](https://images.unsplash.com/photo-1534361960057-19889db9621e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1740&q=80)
+[Joe Caione](https://unsplash.com/@joeyc) via unsplash.com
+:::
+::::
+
+# 8. Application Programming Interface (APIs) 
+## 8. Application Programming Interface (APIs) : What we learned about
+
+:::: {.columns}
+::: {.column width="60%"}
+In this session, we learn how to adopt data from someone else.
+We will:
+
+- Learn what an API is and what parts it consists of
+- Learn about `httr2`, a modern intuitive package to communicate with APIs
+- Discuss some examples:
+  - A simple first API: The Guardian API
+  - UK Parliament API
+  - Semantic Scholar API
+- Go into a bit more detail on requesting raw data
+  
+![Original Image Source: prowebscraper.com](../06_Introduction_to_the_Web/media/web_scraping_steps.png)
+:::
+::: {.column width="40%" }
+![](https://images.wagwalkingweb.com/media/daily_wag/blog_articles/hero/1651153661.2751184/a-day-in-the-life-of-an-animal-shelter-volunteer.png)
+[By Emily Gantt](https://wagwalking.com/daily/a-day-in-the-life-of-an-animal-shelter-volunteer)
+:::
+::::
+
+# 9. Interactive Web Pages
+## 9. Interactive Web Pages: What we learned about
+
+:::: {.columns}
+::: {.column width="60%"}
+In this session, we learn how to hunt down **wild** data.
+We will:
+
+- Learn how to find secret APIs
+- Emulate a Browser
+- We focus specifically on step 1 below
+  
+![Original Image Source: prowebscraper.com](../06_Introduction_to_the_Web/media/web_scraping_steps.png)
+:::
+::: {.column width="40%" }
+![](https://images.unsplash.com/photo-1564166174574-a9666f590437?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=774&q=80)
+[Philipp Pilz](https://unsplash.com/@buchstabenhausen) via unsplash.com
+:::
+::::
+
+# Now it's your turn!
+
+
+
 

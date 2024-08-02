@@ -1,5 +1,5 @@
 ---
-title: "Session 9: Scraping Interactive Web Pages (part 2"
+title: "Session 9: Scraping Interactive Web Pages (part 2)"
 subtitle: "Introduction to Web Scraping and Data Management for Social Scientists"
 author: "Johannes B. Gruber"
 date: 2024-08-01
